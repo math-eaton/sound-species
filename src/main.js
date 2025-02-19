@@ -75,7 +75,7 @@ function createOrbitGroup() {
 
   // One sphere for each placed beat
   const spheres = [];
-  const sphereGeom = new THREE.SphereGeometry(0.5, 12, 12);
+  const sphereGeom = new THREE.SphereGeometry(0.35, 12, 12);
 
   spherePhaseOffsets.forEach((offset, idx) => {
     let color = 0xff0000;
