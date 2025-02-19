@@ -55,7 +55,7 @@ function createEllipseGeometry(a, b, segments = 120) {
 }
 
 const a = 10;
-const b = 9;
+const b = 7;
 const ellipseGeom = createEllipseGeometry(a, b);
 
 // ===================== 4. CREATE ONE ORBIT GROUP (PER MEASURE) =====================

@@ -1,12 +1,13 @@
 {
   "name": "sound-species",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy" : "gh-pages -d dist"
   },
   "devDependencies": {
     "vite": "^6.1.0"
