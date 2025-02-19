@@ -8,9 +8,9 @@ const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
   0.1,
-  2000
+  1000
 );
-camera.position.set(0, 1, 18);
+camera.position.set(0, 0, 15);
 
 const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -23,28 +23,16 @@ window.addEventListener('resize', () => {
 });
 
 // ===================== 2. MUSIC / TIMING =====================
-// 4 beats per bar, 107 BPM => measureDuration = 4 * (60/107) seconds
-const BPM = 107;
+// 4 beats per bar, ~107 BPM => measureDuration = 4 * (60/107) seconds
+const BPM = 107.333;
 const measureDuration = (4 * 60) / BPM; // ~2.243 seconds
 
 // The next copy should generate every 4 beats => spawnInterval = measureDuration
 const spawnInterval = measureDuration;
 
-// Which beats do you want spheres to align with?
-//  measure time in "beats from start of bar", so beat 1 = time 0, beat 2 = time 1, etc.
-//
-// The user wants: 
-//   - Beat 1       => time=0
-//   - "& of 2"     => time=1.5 (since beat 2 is time=1, plus 0.5 = 1.5)
-//   - Beat 3       => time=2
-//
-// Each bar is 4 beats long, so the fraction for each is (timeInBeats / 4).
+// The user wants 3 spheres on: beat 1 (time=0), & of 2 (time=1.5), beat 3 (time=2)
 const beatTimes = [0, 1.5, 2];
 const beatFractions = beatTimes.map((t) => t / 4); 
-// e.g. => [0, 0.375, 0.5]
-
-// convert each beat fraction into a phase offset so that
-// each sphere crosses angle=0 at that moment in the measure:
 const spherePhaseOffsets = beatFractions.map((f) => -2 * Math.PI * f);
 
 // ===================== 3. ELLIPSE GEOMETRY (LOCAL XZ) =====================
@@ -75,10 +63,11 @@ function createOrbitGroup() {
   const group = new THREE.Group();
 
   // Ellipse line
-  const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff,
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0xffffff,
     transparent: true,
-    opacity: 0.5,
-    alphaHash: 0.5,
+    opacity: 0.666,
+    alphaHash: 0.666,
     depthWrite: false,
   });
   const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
@@ -86,14 +75,20 @@ function createOrbitGroup() {
 
   // One sphere for each placed beat
   const spheres = [];
-  const sphereGeom = new THREE.SphereGeometry(0.3, 16, 16);
+  const sphereGeom = new THREE.SphereGeometry(0.5, 12, 12);
 
   spherePhaseOffsets.forEach((offset, idx) => {
     let color = 0xff0000;
     if (idx === 1) color = 0xffff00;
     if (idx === 2) color = 0x0000ff;
 
-    const sphereMat = new THREE.MeshBasicMaterial({ color });
+    const sphereMat = new THREE.MeshBasicMaterial({ 
+      color,
+      transparent: true,
+      opacity: 0.85,
+      alphaHash: 0.85,
+      wireframe: true, 
+      });
     const sphere = new THREE.Mesh(sphereGeom, sphereMat);
     spheres.push({ sphere, offset });
     group.add(sphere);
@@ -108,20 +103,17 @@ function createOrbitGroup() {
 }
 
 // ===================== 5. RECEDING / SPAWN LOGIC =====================
-const vanishDistance = 500; // once z < -N, remove
-const recessionSpeed = 6;  // how fast groups recede
+const vanishDistance = 1000;  // once z < -N, remove
+const recessionSpeed = 6;    // how fast groups recede
 let lastSpawnTime = 0;
 
 //  each new measure group tilted forward by -45° towards viewer
 // + rotated out of phase from previous generation by +N°
 const tiltAngle = -Math.PI / 4;
-let orbitRotationOffset = 0; // this accumulates +phaseOffset° each spawn
+let orbitRotationOffset = 0; 
 let phaseOffset = 33;
 
-//  track all measure groups in an array
 const allGroups = [];
-
-// Use a clock for global timing
 const clock = new THREE.Clock();
 
 // ===================== 6. ANIMATION LOOP =====================
@@ -129,21 +121,15 @@ function animate() {
   requestAnimationFrame(animate);
   const elapsedTime = clock.getElapsedTime();
 
-  // 6a) Spawn a new measure group every 4 beats => spawnInterval = measureDuration
+  // 6a) Spawn a new measure group every measure
   if (elapsedTime - lastSpawnTime >= spawnInterval) {
     lastSpawnTime = elapsedTime;
-    orbitRotationOffset += THREE.MathUtils.degToRad(phaseOffset); // +N degrees each measure
+    orbitRotationOffset += THREE.MathUtils.degToRad(phaseOffset);
 
-    // Create a new measure group
     const group = createOrbitGroup();
-
-    // Tilt forward, then rotate about Y by the offset
     group.rotation.x = tiltAngle;
     group.rotation.y = orbitRotationOffset;
-
-    // Start near camera
     group.position.z = 0;
-
     group.userData.birthTime = elapsedTime;
 
     scene.add(group);
@@ -159,11 +145,10 @@ function animate() {
     // Recede in Z
     group.position.z = -age * recessionSpeed;
 
-    // Determine how far along you are in this measure (0..1)
-    // Each measure is measureDuration long
+    // measureFraction
     const measureFraction = (age / measureDuration) % 1;
 
-    // Update each sphere according to measureFraction + offset
+    // Update each sphere
     spheres.forEach(({ sphere, offset }) => {
       const angle = 2 * Math.PI * measureFraction + offset;
       sphere.position.x = a * Math.cos(angle);
@@ -189,4 +174,21 @@ function animate() {
   // 6d) Render
   renderer.render(scene, camera);
 }
-animate();
+
+// ===================== 7. START ON AUDIO PLAY =====================
+
+let animationStarted = false;
+const audioElement = document.getElementById('myAudio');
+
+// When user presses play in the audio controls, start the clock + animation
+audioElement.addEventListener('play', () => {
+  if (!animationStarted) {
+    // Reset the clock so it starts from 0
+    clock.start();
+    animationStarted = true;
+    // Begin Three.js animation
+    animate();
+  }
+  // Hide the audio element
+  audioElement.style.display = 'none';
+});
