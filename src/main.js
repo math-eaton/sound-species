@@ -82,6 +82,7 @@ function createOrbitGroup() {
     if (idx === 1) color = 0xffff00;
     if (idx === 2) color = 0x0000ff;
 
+
     const sphereMat = new THREE.MeshBasicMaterial({ 
       color,
       transparent: true,
@@ -179,6 +180,7 @@ function animate() {
 
 let animationStarted = false;
 const audioElement = document.getElementById('audioPlayer');
+const playerContainer = document.getElementById('playerContainer');
 
 // When user presses play in the audio controls, start the clock + animation
 audioElement.addEventListener('play', () => {
@@ -190,5 +192,5 @@ audioElement.addEventListener('play', () => {
     animate();
   }
   // Hide the audio element
-  audioElement.style.display = 'none';
+  playerContainer.style.display = 'none';
 });
