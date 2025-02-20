@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { combineColorsAdditive } from './colorUtils.js'; // relative path
 
       // ===================== 1. SCENE SETUP =====================
       const scene = new THREE.Scene();
@@ -134,7 +133,7 @@ import { combineColorsAdditive } from './colorUtils.js'; // relative path
 
       function createOrbitGroup() {
         const group = new THREE.Group();
-
+      
         // Ellipse line
         const lineMat = new THREE.LineBasicMaterial({
           color: 0xffffff,
@@ -144,35 +143,38 @@ import { combineColorsAdditive } from './colorUtils.js'; // relative path
         });
         const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
         group.add(ellipseLine);
-
+      
         // Build spheres based on the current track patterns
         const sphereGeom = new THREE.SphereGeometry(0.35, 12, 12);
-        const spheres = []; // array of { sphere, offsetAngle }
-
+        const spheres = []; // Store spheres here
+      
         tracks.forEach((track) => {
           const { color, pattern, numSteps } = track;
           for (let step = 0; step < numSteps; step++) {
-            if (!pattern[step]) continue; // skip if not active
-
+            if (!pattern[step]) continue; // Skip if not active
+      
             const sphereMat = new THREE.MeshBasicMaterial({
               color,
               transparent: true,
-              opacity: 0.85,
+              opacity: 0.5, // Lower opacity to allow blending
+              blending: THREE.AdditiveBlending, // Enables color mixing
+              depthWrite: false, // Prevents depth-buffer conflicts
             });
+      
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-
-            // offsetAngle is 2π * (step / numSteps)
             const offsetAngle = 2 * Math.PI * (step / numSteps);
-
-            spheres.push({ sphere, offsetAngle });
+      
+            spheres.push({ sphere, offsetAngle }); // Store in the array
             group.add(sphere);
           }
         });
-
+      
+        // Store the spheres inside group.userData
         group.userData = { spheres, birthTime: 0 };
+      
         return group;
       }
-
+      
       // ===================== 6. ANIMATION LOOP =====================
       function animate() {
         requestAnimationFrame(animate);
