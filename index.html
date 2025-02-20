@@ -7,12 +7,36 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
 <body>
-<div id="playerContainer">
-  <span>HUERCO S. - ANAGRAMME OF MY LOVE</span>
-  <small><em>&#169; SOFTWARE RECORDING CO. / MEXICAN SUMMER (2013)</em></small>
-  <br>
-  <audio id="audioPlayer" src="/assets/sounds/huercoS.mp3" controls loop></audio>
-</div>
+  <div id="uiContainer">
+    <label>Number of Steps (1-45): 
+      <input id="stepsInput" type="number" min="1" max="45" value="16" />
+    </label>
+    <button id="applyStepsBtn">Apply Steps</button>
+
+    <div class="instrument-block">
+      <strong>Red Sphere Pattern</strong>
+      <div id="redPattern" class="checkbox-grid"></div>
+    </div>
+    <div class="instrument-block">
+      <strong>Yellow Sphere Pattern</strong>
+      <div id="yellowPattern" class="checkbox-grid"></div>
+    </div>
+    <div class="instrument-block">
+      <strong>Blue Sphere Pattern</strong>
+      <div id="bluePattern" class="checkbox-grid"></div>
+    </div>
+    <button id="updatePatternBtn">Update Pattern</button>
+  </div>
+
+  <!-- The audio player from your original code. Include it if needed: -->
+  <div id="playerContainer">
+    <audio
+      id="audioPlayer"
+      src="assets/sounds/huercoS.mp3"
+      controls
+    ></audio>
+  </div>
+
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>

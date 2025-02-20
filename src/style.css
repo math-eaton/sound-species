@@ -22,10 +22,10 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  margin: 0; 
+  overflow: hidden; 
+  background: #202020; 
+  color: #ccc; 
   font-family: Arial, Helvetica, sans-serif
 }
 
@@ -42,10 +42,34 @@ body {
   cursor: pointer;
 }
 
+#uiContainer {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(20, 20, 20, 0.8);
+  padding: 10px;
+  border-radius: 6px;
+}
+.instrument-block {
+  margin-bottom: 8px;
+}
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24px, 24px));
+  gap: 4px;
+}
+label {
+  font-size: 0.8rem;
+}
+input[type="number"] {
+  width: 50px;
+}
+
+
 @media (max-width: 600px) {
   body {
   overflow-y: hidden;
-  
+
   }
   #playerContainer {
     width: 90%;
