@@ -178,7 +178,7 @@ function animate() {
 // ===================== 7. START ON AUDIO PLAY =====================
 
 let animationStarted = false;
-const audioElement = document.getElementById('myAudio');
+const audioElement = document.getElementById('audioPlayer');
 
 // When user presses play in the audio controls, start the clock + animation
 audioElement.addEventListener('play', () => {
