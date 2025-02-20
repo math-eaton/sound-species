@@ -87,8 +87,8 @@ function createOrbitGroup() {
       color,
       transparent: true,
       opacity: 0.85,
-      alphaHash: 0.85,
-      wireframe: true, 
+      alphaHash: 0.15,
+      wireframe: false, 
       });
     const sphere = new THREE.Mesh(sphereGeom, sphereMat);
     spheres.push({ sphere, offset });
