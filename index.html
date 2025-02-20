@@ -8,33 +8,33 @@
   </head>
 <body>
   <div id="uiContainer">
-    <label>Number of Steps (1-45): 
-      <input id="stepsInput" type="number" min="1" max="45" value="16" />
-    </label>
-    <button id="applyStepsBtn">Apply Steps</button>
-
-    <div class="instrument-block">
-      <strong>Red Sphere Pattern</strong>
+    <div class="track-block" id="redTrackBlock">
+      <strong style="color: #f66">A</strong><br/>
+      <label>
+        <input id="redStepsInput" type="number" min="1" max="45" value="16" />
+      </label>
       <div id="redPattern" class="checkbox-grid"></div>
     </div>
-    <div class="instrument-block">
-      <strong>Yellow Sphere Pattern</strong>
+    <div class="track-block" id="yellowTrackBlock">
+      <strong style="color: #ff0">B</strong><br/>
+      <label>
+        <input id="yellowStepsInput" type="number" min="1" max="45" value="16" />
+      </label>
       <div id="yellowPattern" class="checkbox-grid"></div>
     </div>
-    <div class="instrument-block">
-      <strong>Blue Sphere Pattern</strong>
+    <div class="track-block" id="blueTrackBlock">
+      <strong style="color: #6af">C</strong><br/>
+      <label>
+        <input id="blueStepsInput" type="number" min="1" max="45" value="16" />
+      </label>
       <div id="bluePattern" class="checkbox-grid"></div>
     </div>
-    <button id="updatePatternBtn">Update Pattern</button>
   </div>
 
-  <!-- The audio player from your original code. Include it if needed: -->
-  <div id="playerContainer">
-    <audio
-      id="audioPlayer"
-      src="assets/sounds/huercoS.mp3"
-      controls
-    ></audio>
+  <!-- (Optional) Audio container from your code -->
+  <div
+    id="playerContainer"  >
+    <audio id="audioPlayer" controls src="/assets/sounds/huercoS.mp3"></audio>
   </div>
 
 <script type="module" src="/src/main.js"></script>

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { combineColorsAdditive } from './colorUtils.js'; // relative path
 
       // ===================== 1. SCENE SETUP =====================
       const scene = new THREE.Scene();
@@ -12,25 +13,22 @@ import * as THREE from 'three';
       );
       camera.position.set(0, 0, 15);
 
-      const renderer = new THREE.WebGLRenderer({ antialias: false });
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      window.addEventListener('resize', () => {
+      window.addEventListener("resize", () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       });
 
       // ===================== 2. MUSIC / TIMING =====================
-      // 4 beats per bar, ~107 BPM => measureDuration = 4 * (60/107) seconds
       const BPM = 107.333;
       const measureDuration = (4 * 60) / BPM; // ~2.243 seconds
-
-      // The next copy should generate every 4 beats => spawnInterval = measureDuration
       const spawnInterval = measureDuration;
 
-      // ===================== 3. ELLIPSE GEOMETRY (LOCAL XZ) =====================
+      // ===================== 3. ELLIPSE GEOMETRY =====================
       function createEllipseGeometry(a, b, segments = 120) {
         const ellipseCurve = new THREE.EllipseCurve(
           0, 0, // center
@@ -48,97 +46,88 @@ import * as THREE from 'three';
         }
         return geom;
       }
-
       const a = 10;
       const b = 7;
       const ellipseGeom = createEllipseGeometry(a, b);
 
-      // ===================== 4. GLOBAL PATTERNS & UI LOGIC =====================
-      // We store 3 separate pattern arrays, one for each "sphere/instrument"
-      // Default to 16 steps. Each is an array of boolean: true=active step, false=inactive.
-      let numSteps = 16;
-      let patterns = [
-        new Array(numSteps).fill(false), // Red
-        new Array(numSteps).fill(false), // Yellow
-        new Array(numSteps).fill(false), // Blue
+      // ===================== 4. GLOBAL PATTERNS & UI =====================
+      // Instead of a single array, let's store everything in an array of track objects:
+      // Each track has:
+      //   - color
+      //   - numSteps
+      //   - pattern (boolean array)
+      //   - references to DOM elements (step input, pattern container)
+      const tracks = [
+        {
+          color: 0xff0000,
+          numSteps: 16,
+          pattern: new Array(16).fill(false),
+          stepsInput: document.getElementById("redStepsInput"),
+          patternContainer: document.getElementById("redPattern"),
+        },
+        {
+          color: 0xffff00,
+          numSteps: 16,
+          pattern: new Array(16).fill(false),
+          stepsInput: document.getElementById("yellowStepsInput"),
+          patternContainer: document.getElementById("yellowPattern"),
+        },
+        {
+          color: 0x0000ff,
+          numSteps: 16,
+          pattern: new Array(16).fill(false),
+          stepsInput: document.getElementById("blueStepsInput"),
+          patternContainer: document.getElementById("bluePattern"),
+        },
       ];
 
-      // Create some quick helpers for building & reading pattern checkboxes:
-      function buildCheckboxes(containerId, instrumentIndex) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = ""; // Clear existing
-
-        for (let i = 0; i < numSteps; i++) {
+      // Utility function: build the checkboxes for a given track
+      function buildTrackCheckboxes(track) {
+        track.patternContainer.innerHTML = ""; // Clear
+        for (let i = 0; i < track.numSteps; i++) {
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
-          checkbox.checked = patterns[instrumentIndex][i];
-          checkbox.dataset["stepIndex"] = i;
-          checkbox.dataset["instIndex"] = instrumentIndex;
-          // For clarity, you can add a label if you want step numbers visible:
-          // but the grid is small, so we’ll skip labeling each step.
-
-          container.appendChild(checkbox);
+          checkbox.checked = track.pattern[i];
+          checkbox.style.cursor = "pointer";
+          checkbox.addEventListener("change", () => {
+            // Update pattern array on every toggle
+            track.pattern[i] = checkbox.checked;
+          });
+          track.patternContainer.appendChild(checkbox);
         }
       }
 
-      function rebuildAllCheckboxes() {
-        buildCheckboxes("redPattern", 0);
-        buildCheckboxes("yellowPattern", 1);
-        buildCheckboxes("bluePattern", 2);
-      }
+      // Create an event listener for each track's step input
+      tracks.forEach((track) => {
+        // Rebuild the checkboxes for the default 16 steps
+        buildTrackCheckboxes(track);
 
-      function readPatternsFromUI() {
-        // For each instrument container, read all checkboxes
-        ["redPattern","yellowPattern","bluePattern"].forEach((id, instIdx) => {
-          const container = document.getElementById(id);
-          const checkboxes = container.querySelectorAll("input[type='checkbox']");
-          checkboxes.forEach((cb) => {
-            const stepIndex = Number(cb.dataset["stepIndex"]);
-            patterns[instIdx][stepIndex] = cb.checked;
-          });
-        });
-      }
+        // On user changes step count
+        track.stepsInput.addEventListener("change", () => {
+          const val = parseInt(track.stepsInput.value, 10);
+          if (isNaN(val) || val < 1 || val > 24) return;
 
-      // Initialize UI with 16 toggles each
-      rebuildAllCheckboxes();
-
-      const stepsInput = document.getElementById("stepsInput");
-      const applyStepsBtn = document.getElementById("applyStepsBtn");
-      const updatePatternBtn = document.getElementById("updatePatternBtn");
-
-      applyStepsBtn.addEventListener("click", () => {
-        // Use the new step count
-        const newVal = parseInt(stepsInput.value, 10);
-        if (isNaN(newVal) || newVal < 1 || newVal > 45) return;
-
-        numSteps = newVal;
-        // Rebuild the pattern arrays (preserving old data if smaller or larger)
-        patterns = patterns.map(oldArr => {
-          const newArr = new Array(numSteps).fill(false);
-          for (let i = 0; i < Math.min(numSteps, oldArr.length); i++) {
-            newArr[i] = oldArr[i];
+          // Rebuild pattern array for the new length
+          const newPattern = new Array(val).fill(false);
+          for (let i = 0; i < Math.min(val, track.numSteps); i++) {
+            newPattern[i] = track.pattern[i];
           }
-          return newArr;
+          track.numSteps = val;
+          track.pattern = newPattern;
+
+          // Rebuild checkboxes
+          buildTrackCheckboxes(track);
         });
-        rebuildAllCheckboxes();
       });
 
-      updatePatternBtn.addEventListener("click", () => {
-        readPatternsFromUI();
-      });
-
-      // ===================== 5. CREATE ONE ORBIT GROUP (PER MEASURE) =====================
-      // Now, instead of just 3 spheres with fixed offsets, we’ll create one sphere
-      // for each "active" step in each instrument. We’ll store them in userData for that group.
-      const vanishDistance = 1000;  // once z < -N, remove
-      const recessionSpeed = 6;     // how fast groups recede
+      // ===================== 5. CREATE ORBIT GROUPS =====================
+      const vanishDistance = 1000;
+      const recessionSpeed = 6;
       let lastSpawnTime = 0;
 
-      //  each new measure group tilted forward by -45° towards viewer
-      // + rotated out of phase from previous generation by +N°
       const tiltAngle = -Math.PI / 4;
       let orbitRotationOffset = 0;
-      let phaseOffset = 45; // degrees
+      let phaseOffset = 33; // degrees
 
       const allGroups = [];
       const clock = new THREE.Clock();
@@ -150,47 +139,37 @@ import * as THREE from 'three';
         const lineMat = new THREE.LineBasicMaterial({
           color: 0xffffff,
           transparent: true,
-          opacity: 0.666,
-          alphaHash: 0.666,
+          opacity: 0.66,
           depthWrite: false,
         });
         const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
         group.add(ellipseLine);
 
-        // For each instrument, for each step, if active => create sphere
+        // Build spheres based on the current track patterns
         const sphereGeom = new THREE.SphereGeometry(0.35, 12, 12);
-        const instrumentsColors = [0xff0000, 0xffff00, 0x0000ff];
+        const spheres = []; // array of { sphere, offsetAngle }
 
-        const spheres = []; 
-        for (let inst = 0; inst < 3; inst++) {
+        tracks.forEach((track) => {
+          const { color, pattern, numSteps } = track;
           for (let step = 0; step < numSteps; step++) {
-            if (!patterns[inst][step]) continue; // skip if inactive
+            if (!pattern[step]) continue; // skip if not active
+
             const sphereMat = new THREE.MeshBasicMaterial({
-              color: instrumentsColors[inst],
+              color,
               transparent: true,
               opacity: 0.85,
-              alphaHash: 0.15,
-              wireframe: false,
             });
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
 
-            // offset = stepIndex * stepSize, plus maybe small instrument offset
-            const stepFraction = step / numSteps;
-            // 2 * Math.PI * measureFraction + offset => offset is 2 * Math.PI * stepFraction
-            // If you want an additional offset per instrument, you can add something like:
-            // + inst * (Math.PI / 6)
-            const offsetAngle = 2 * Math.PI * stepFraction;
+            // offsetAngle is 2π * (step / numSteps)
+            const offsetAngle = 2 * Math.PI * (step / numSteps);
 
             spheres.push({ sphere, offsetAngle });
             group.add(sphere);
           }
-        }
+        });
 
-        group.userData = {
-          spheres,       // array of { sphere, offsetAngle }
-          birthTime: 0,  // set later
-        };
-
+        group.userData = { spheres, birthTime: 0 };
         return group;
       }
 
@@ -199,7 +178,7 @@ import * as THREE from 'three';
         requestAnimationFrame(animate);
         const elapsedTime = clock.getElapsedTime();
 
-        // 6a) Spawn a new measure group every measure
+        // Spawn a new measure group every measure
         if (elapsedTime - lastSpawnTime >= spawnInterval) {
           lastSpawnTime = elapsedTime;
           orbitRotationOffset += THREE.MathUtils.degToRad(phaseOffset);
@@ -214,21 +193,20 @@ import * as THREE from 'three';
           allGroups.push(group);
         }
 
-        // 6b) Update each measure group
+        // Update each measure group
         const toRemove = [];
         allGroups.forEach((group) => {
           const { spheres, birthTime } = group.userData;
           const age = elapsedTime - birthTime;
 
-          // Recede in Z
+          // Recede
           group.position.z = -age * recessionSpeed;
 
-          // measureFraction = [0..1] across the measure
+          // measureFraction for this bar
           const measureFraction = (age / measureDuration) % 1;
 
-          // Update each sphere position around the ellipse
+          // Update each sphere
           spheres.forEach(({ sphere, offsetAngle }) => {
-            // angle = 2π * measureFraction + offsetAngle
             const angle = 2 * Math.PI * measureFraction + offsetAngle;
             sphere.position.x = a * Math.cos(angle);
             sphere.position.y = 0;
@@ -241,7 +219,7 @@ import * as THREE from 'three';
           }
         });
 
-        // 6c) Remove old measure groups
+        // Remove old groups
         toRemove.forEach((g) => {
           scene.remove(g);
           const idx = allGroups.indexOf(g);
@@ -250,22 +228,26 @@ import * as THREE from 'three';
           }
         });
 
-        // 6d) Render
         renderer.render(scene, camera);
       }
 
-      // ===================== 7. START ON AUDIO PLAY =====================
-      let animationStarted = false;
-      const audioElement = document.getElementById('audioPlayer');
-      const playerContainer = document.getElementById('playerContainer');
+      // ===================== 7. AUDIO + START =====================
 
-      // When user presses play in the audio controls, start the clock + animation
-      audioElement.addEventListener('play', () => {
-        if (!animationStarted) {
-          clock.start();
-          animationStarted = true;
-          animate();
-        }
-        // Hide the audio element if you want
+        // for testing purposes, remove audio player logic
         playerContainer.style.display = 'none';
-      });
+        animate();
+
+      // let animationStarted = false;
+      // const audioElement = document.getElementById("audioPlayer");
+      // const playerContainer = document.getElementById("playerContainer");
+
+      // audioElement.addEventListener("play", () => {
+      //   if (!animationStarted) {
+      //     clock.start();
+      //     animationStarted = true;
+      //     animate();
+      //   }
+        
+      //   // Hide the audio element if you want
+      //   playerContainer.style.display = 'none';
+      // });
