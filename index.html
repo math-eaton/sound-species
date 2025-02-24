@@ -2,17 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/sound-species/assets/favicon-Co3C6J4I.png" />
+    <link rel="icon" type="image/svg+xml" href="/sound-species/assets/images/favicon.png" />
     <title>phase helix</title>
-    <script type="module" crossorigin src="/sound-species/assets/index-BYufs-WI.js"></script>
-    <link rel="stylesheet" crossorigin href="/sound-species/assets/index-CTbKT6kU.css">
+    <script type="module" crossorigin src="/sound-species/assets/index-DsXcYqwd.js"></script>
+    <link rel="stylesheet" crossorigin href="/sound-species/assets/index-DENuAoMG.css">
   </head>
 <body>
-<div id="playerContainer">
-  <span>HUERCO S. - ANAGRAMME OF MY LOVE</span>
-  <small><em>&#169; SOFTWARE RECORDING CO. / MEXICAN SUMMER (2013)</em></small>
-  <br>
-  <audio id="audioPlayer" src="/sound-species/assets/sounds/huercoS.mp3" controls loop></audio>
-</div>
+  <div id="uiContainer">
+    <div class="track-block" id="redTrackBlock">
+      <label>
+        <input id="redStepsInput" type="range" min="1" max="24" value="8" />
+        <!-- <span id="redStepsLabel">8</span> -->
+      </label>
+      <div id="redPattern" class="checkbox-grid"></div>
+        </div>
+        <div class="track-block" id="yellowTrackBlock">
+      <label>
+        <input id="yellowStepsInput" type="range" min="1" max="24" value="8" />
+        <!-- <span id="yellowStepsLabel">8</span> -->
+      </label>
+      <div id="yellowPattern" class="checkbox-grid"></div>
+        </div>
+        <div class="track-block" id="blueTrackBlock">
+      <label>
+        <input id="blueStepsInput" type="range" min="1" max="24" value="8" />
+        <!-- <span id="blueStepsLabel">8</span> -->
+      </label>
+      <div id="bluePattern" class="checkbox-grid"></div>
+    </div>
+  </div>
+
+  <div id="playerContainer">
+    <span>HUERCO S. - ANAGRAMME OF MY LOVE</span>
+    <small><em>&#169; SOFTWARE RECORDING CO. / MEXICAN SUMMER (2013)</em></small>
+    <br>
+    <audio id="audioPlayer" src="/sound-species/assets/sounds/huercoS.mp3" controls loop></audio>
+  </div>
+  
 </body>
 </html>
