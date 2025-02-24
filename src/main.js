@@ -33,13 +33,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
       let controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
-      controls.dampingFactor = 0.1; // Slight inertia for smoothness
+      controls.dampingFactor = 0.5; // Slight inertia for smoothness
       controls.enableZoom = false;
       controls.enablePan = false;
-      controls.rotateSpeed = 0.2; // Reduce speed for a subtle effect
+      controls.rotateSpeed = 0.05; // Reduce speed for a subtle effect
       
       // Restrict rotation to a narrow range (small tilts only)
-      const maxTilt = THREE.MathUtils.degToRad(10); // Max 10-degree tilt in any direction
+      const maxTilt = THREE.MathUtils.degToRad(10); // Max N-degree tilt in any direction
       controls.minPolarAngle = Math.PI / 2 - maxTilt; // Prevent excessive up/down movement
       controls.maxPolarAngle = Math.PI / 2 + maxTilt;
       controls.minAzimuthAngle = -maxTilt; // Prevent excessive left/right rotation
@@ -160,125 +160,206 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
           event.stopPropagation();
         });
       });
+
       // ===================== 5. CREATE ORBIT GROUPS =====================
       const vanishDistance = 1500;
-      const recessionSpeed = 6;
+      const recessionVelocity = 4;
       let lastSpawnTime = 0;
 
       const tiltAngle = -Math.PI / 4;
       let orbitRotationOffset = 0;
-      let phaseOffset = 33; // degrees
+      let phaseOffset = 11; // degrees
 
       const allGroups = [];
       const clock = new THREE.Clock();
 
+      const previousSpheres = {}; // Stores the last generation's spheres by color
+      const connectionLines = []; // Stores the lines between generations
+
       function createOrbitGroup() {
         const group = new THREE.Group();
-      
+    
         // Ellipse line
         const lineMat = new THREE.LineBasicMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.66,
-          alphaHash: 0.66,
-          // depthWrite: false,
-          visible: true,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.66,
+            // alphaHash: true,
+            // visible: false,
         });
         const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
         group.add(ellipseLine);
-
-        
+    
         // Build spheres based on the current track patterns
         const sphereGeom = new THREE.SphereGeometry(0.3, 12, 12);
         const spheres = []; // Store spheres here
-      
+        const newSpheresByColor = {}; // Temp storage for this generation's spheres
+    
         tracks.forEach((track) => {
-          const { color, pattern, numSteps } = track;
-          for (let step = 0; step < numSteps; step++) {
-            if (!pattern[step]) continue; // Skip if not active
-      
-            const sphereMat = new THREE.MeshBasicMaterial({
-              color,
-              transparent: true,
-              opacity: 0.8,
-              alphaHash: 0.8,
-              // blending: THREE.AdditiveBlending, // Enables color mixing
-              depthWrite: false,
-            });
-      
-            const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-            const offsetAngle = 2 * Math.PI * (step / numSteps);
-      
-            spheres.push({ sphere, offsetAngle }); // Store in the array
-            group.add(sphere);
-          }
+            const { color, pattern, numSteps } = track;
+            newSpheresByColor[color] = []; // Track new spheres for this color
+    
+            for (let step = 0; step < numSteps; step++) {
+                if (!pattern[step]) continue; // Skip if not active
+    
+                const sphereMat = new THREE.MeshBasicMaterial({
+                    color,
+                    transparent: true,
+                    opacity: 0.85,
+                    blending: THREE.AdditiveBlending,
+                    // depthWrite: false,
+                });
+    
+                const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+                const offsetAngle = 2 * Math.PI * (step / numSteps);
+                sphere.userData = { color, generation: allGroups.length };
+    
+                spheres.push({ sphere, offsetAngle });
+                newSpheresByColor[color].push(sphere);
+                group.add(sphere);
+            }
         });
-      
+    
+        // Create lines between previous and new spheres of the same color
+        Object.keys(newSpheresByColor).forEach((color) => {
+            if (previousSpheres[color]) {
+                previousSpheres[color].forEach((oldSphere, index) => {
+                    if (
+                        index < newSpheresByColor[color].length &&
+                        oldSphere &&
+                        newSpheresByColor[color][index]
+                    ) {
+                        const newSphere = newSpheresByColor[color][index];
+    
+                        // Get world positions of spheres
+                        const oldPos = oldSphere.getWorldPosition(new THREE.Vector3());
+                        const newPos = newSphere.getWorldPosition(new THREE.Vector3());
+    
+                        const positions = new Float32Array([
+                            oldPos.x, oldPos.y, oldPos.z,
+                            newPos.x, newPos.y, newPos.z
+                        ]);
+    
+                        const lineGeom = new THREE.BufferGeometry();
+                        lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+                        const lineMat = new THREE.LineBasicMaterial({
+                            color: 0xffffff,
+                            transparent: true,
+                            opacity: 0.5,
+                            alphaHash: true,
+                            // depthTest: false, 
+                        });
+    
+                        const line = new THREE.Line(lineGeom, lineMat);
+                        line.userData = { sphereA: oldSphere, sphereB: newSphere };
+    
+                        scene.add(line);
+                        connectionLines.push(line);
+                    }
+                });
+            }
+        });
+    
+        // Update previous spheres for the next generation
+        Object.keys(newSpheresByColor).forEach((color) => {
+            previousSpheres[color] = newSpheresByColor[color];
+        });
+    
         // Store the spheres inside group.userData
         group.userData = { spheres, birthTime: 0 };
-      
+    
         return group;
-      }
-      
+    }
+              
       // ===================== 6. ANIMATION LOOP =====================
       function animate() {
         requestAnimationFrame(animate);
         const elapsedTime = clock.getElapsedTime();
-
+    
         // Spawn a new measure group every measure
         if (elapsedTime - lastSpawnTime >= spawnInterval) {
-          lastSpawnTime = elapsedTime;
-          orbitRotationOffset += THREE.MathUtils.degToRad(phaseOffset);
-
-          const group = createOrbitGroup();
-          group.rotation.x = tiltAngle;
-          group.rotation.y = orbitRotationOffset;
-          group.position.z = 0;
-          group.userData.birthTime = elapsedTime;
-
-          scene.add(group);
-          allGroups.push(group);
+            lastSpawnTime = elapsedTime;
+            orbitRotationOffset += THREE.MathUtils.degToRad(phaseOffset);
+    
+            const group = createOrbitGroup();
+            group.rotation.x = tiltAngle;
+            group.rotation.y = orbitRotationOffset;
+            group.position.z = 0;
+            group.userData.birthTime = elapsedTime;
+    
+            scene.add(group);
+            allGroups.push(group);
         }
-
+    
         // Update each measure group
         const toRemove = [];
         allGroups.forEach((group) => {
-          const { spheres, birthTime } = group.userData;
-          const age = elapsedTime - birthTime;
-
-          // Recede
-          group.position.z = -age * recessionSpeed;
-
-          // measureFraction for this bar
-          const measureFraction = (age / measureDuration) % 1;
-
-          // Update each sphere
-          spheres.forEach(({ sphere, offsetAngle }) => {
-            const angle = 2 * Math.PI * measureFraction + offsetAngle;
-            sphere.position.x = a * Math.cos(angle);
-            sphere.position.y = 0;
-            sphere.position.z = b * Math.sin(angle);
-          });
-
-          // Vanish check
-          if (group.position.z < -vanishDistance) {
-            toRemove.push(group);
-          }
+            const { spheres, birthTime } = group.userData;
+            const age = elapsedTime - birthTime;
+    
+            // Recede
+            group.position.z = -age * recessionVelocity;
+    
+            // measureFraction for this bar
+            const measureFraction = (age / measureDuration) % 1;
+    
+            // Update each sphere
+            spheres.forEach(({ sphere, offsetAngle }) => {
+                const angle = 2 * Math.PI * measureFraction + offsetAngle;
+                sphere.position.x = a * Math.cos(angle);
+                sphere.position.y = 0;
+                sphere.position.z = b * Math.sin(angle);
+            });
         });
-
-        // Remove old groups
+    
+        // Update connection lines
+        connectionLines.forEach((line, index) => {
+            if (!line.userData.sphereA || !line.userData.sphereB) return; // Prevent undefined access
+    
+            const posA = line.userData.sphereA.getWorldPosition(new THREE.Vector3());
+            const posB = line.userData.sphereB.getWorldPosition(new THREE.Vector3());
+    
+            const positions = line.geometry.attributes.position.array;
+            positions[0] = posA.x;
+            positions[1] = posA.y;
+            positions[2] = posA.z;
+            positions[3] = posB.x;
+            positions[4] = posB.y;
+            positions[5] = posB.z;
+    
+            line.geometry.attributes.position.needsUpdate = true;
+        });
+    
+        // Remove old groups and their connection lines
+        allGroups.forEach((group) => {
+            if (group.position.z < -vanishDistance) {
+                toRemove.push(group);
+            }
+        });
+    
         toRemove.forEach((g) => {
-          scene.remove(g);
-          const idx = allGroups.indexOf(g);
-          if (idx >= 0) {
-            allGroups.splice(idx, 1);
-          }
+            scene.remove(g);
+            const idx = allGroups.indexOf(g);
+            if (idx >= 0) allGroups.splice(idx, 1);
         });
+    
+        // Remove old connection lines
+        for (let i = connectionLines.length - 1; i >= 0; i--) {
+            const line = connectionLines[i];
+            if (
+                line.userData.sphereA.position.z < -vanishDistance ||
+                line.userData.sphereB.position.z < -vanishDistance
+            ) {
+                scene.remove(line);
+                connectionLines.splice(i, 1);
+            }
+        }
+    
         controls.update();
-
         renderer.render(scene, camera);
-      }
-
+    }
+        
       // ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
