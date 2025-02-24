@@ -289,6 +289,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
       let animationStarted = false;
       const audioElement = document.getElementById("audioPlayer");
       const playerContainer = document.getElementById("playerContainer");
+      const uiContainer = document.getElementById("uiContainer");
+      uiContainer.style.display = 'none';
+
 
       audioElement.addEventListener("play", () => {
         if (!animationStarted) {
@@ -297,6 +300,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
           animate();
         }
         
-        // Hide the audio element if you want
+        uiContainer.style.display = 'block';
         playerContainer.style.display = 'none';
       });
