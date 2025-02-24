@@ -181,7 +181,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
           transparent: true,
           opacity: 0.66,
           alphaHash: 0.66,
-          depthWrite: false,
+          // depthWrite: false,
           visible: true,
         });
         const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
@@ -189,7 +189,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
         
         // Build spheres based on the current track patterns
-        const sphereGeom = new THREE.SphereGeometry(0.35, 12, 12);
+        const sphereGeom = new THREE.SphereGeometry(0.3, 12, 12);
         const spheres = []; // Store spheres here
       
         tracks.forEach((track) => {
@@ -200,9 +200,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
             const sphereMat = new THREE.MeshBasicMaterial({
               color,
               transparent: true,
-              opacity: 0.85,
-              alphaHash: 0.85,
-              blending: THREE.AdditiveBlending, // Enables color mixing
+              opacity: 0.8,
+              alphaHash: 0.8,
+              // blending: THREE.AdditiveBlending, // Enables color mixing
               depthWrite: false,
             });
       
@@ -274,7 +274,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
             allGroups.splice(idx, 1);
           }
         });
-        console.log(controls.getPolarAngle());
         controls.update();
 
         renderer.render(scene, camera);
