@@ -9,34 +9,35 @@
 <body>
   <div id="uiContainer">
     <div class="track-block" id="redTrackBlock">
-      <strong style="color: #f66">A</strong><br/>
+      <strong style="color: rgb(255, 0, 0)">A</strong><br/>
       <label>
-        <input id="redStepsInput" type="number" min="1" max="45" value="16" />
+        <input id="redStepsInput" type="number" min="1" max="24" value="8" />
       </label>
       <div id="redPattern" class="checkbox-grid"></div>
     </div>
     <div class="track-block" id="yellowTrackBlock">
       <strong style="color: #ff0">B</strong><br/>
       <label>
-        <input id="yellowStepsInput" type="number" min="1" max="45" value="16" />
+        <input id="yellowStepsInput" type="number" min="1" max="24" value="8" />
       </label>
       <div id="yellowPattern" class="checkbox-grid"></div>
     </div>
     <div class="track-block" id="blueTrackBlock">
       <strong style="color: #6af">C</strong><br/>
       <label>
-        <input id="blueStepsInput" type="number" min="1" max="45" value="16" />
+        <input id="blueStepsInput" type="number" min="1" max="24" value="8" />
       </label>
       <div id="bluePattern" class="checkbox-grid"></div>
     </div>
   </div>
 
-  <!-- (Optional) Audio container from your code -->
-  <div
-    id="playerContainer"  >
-    <audio id="audioPlayer" controls src="/assets/sounds/huercoS.mp3"></audio>
+  <div id="playerContainer">
+    <span>HUERCO S. - ANAGRAMME OF MY LOVE</span>
+    <small><em>&#169; SOFTWARE RECORDING CO. / MEXICAN SUMMER (2013)</em></small>
+    <br>
+    <audio id="audioPlayer" src="/assets/sounds/huercoS.mp3" controls loop></audio>
   </div>
-
-<script type="module" src="/src/main.js"></script>
+  
+<script type="module" src="/src/main.js" defer></script>
 </body>
 </html>

@@ -1,21 +1,50 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
 
       // ===================== 1. SCENE SETUP =====================
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x000000);
+      scene.background = new THREE.Color(0x20d0d);
 
       const camera = new THREE.PerspectiveCamera(
         60,
         window.innerWidth / window.innerHeight,
         0.1,
-        1000
+        1500
       );
-      camera.position.set(0, 0, 15);
 
+      // ortho cam settings
+      // const aspect = window.innerWidth / window.innerHeight;
+      // const frustumSize = 20;
+      // const camera = new THREE.OrthographicCamera(
+      //   frustumSize * aspect / -2,
+      //   frustumSize * aspect / 2,
+      //   frustumSize / 2,
+      //   frustumSize / -2,
+      //   0.1,
+      //   1500
+      // );
+
+      camera.position.set(0, 0, 15);
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.domElement.className = 'three-container';
       document.body.appendChild(renderer.domElement);
 
+      let controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.1; // Slight inertia for smoothness
+      controls.enableZoom = false;
+      controls.enablePan = false;
+      controls.rotateSpeed = 0.2; // Reduce speed for a subtle effect
+      
+      // Restrict rotation to a narrow range (small tilts only)
+      const maxTilt = THREE.MathUtils.degToRad(10); // Max 10-degree tilt in any direction
+      controls.minPolarAngle = Math.PI / 2 - maxTilt; // Prevent excessive up/down movement
+      controls.maxPolarAngle = Math.PI / 2 + maxTilt;
+      controls.minAzimuthAngle = -maxTilt; // Prevent excessive left/right rotation
+      controls.maxAzimuthAngle = maxTilt;
+      
       window.addEventListener("resize", () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -59,26 +88,31 @@ import * as THREE from 'three';
       const tracks = [
         {
           color: 0xff0000,
-          numSteps: 16,
+          numSteps: 8,
           pattern: new Array(16).fill(false),
           stepsInput: document.getElementById("redStepsInput"),
           patternContainer: document.getElementById("redPattern"),
         },
         {
           color: 0xffff00,
-          numSteps: 16,
+          numSteps: 8,
           pattern: new Array(16).fill(false),
           stepsInput: document.getElementById("yellowStepsInput"),
           patternContainer: document.getElementById("yellowPattern"),
         },
         {
           color: 0x0000ff,
-          numSteps: 16,
+          numSteps: 8,
           pattern: new Array(16).fill(false),
           stepsInput: document.getElementById("blueStepsInput"),
           patternContainer: document.getElementById("bluePattern"),
         },
       ];
+
+      // Set default patterns
+      tracks[0].pattern[0] = true; // Step 1 of 8 for red pattern
+      tracks[1].pattern[3] = true; // Step 4 of 8 for yellow pattern
+      tracks[2].pattern[4] = true; // Step 5 of 8 for blue pattern
 
       // Utility function: build the checkboxes for a given track
       function buildTrackCheckboxes(track) {
@@ -87,10 +121,11 @@ import * as THREE from 'three';
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
           checkbox.checked = track.pattern[i];
+          checkbox.className = "ui-checkbox"; // Add a separate class for UI elements
           checkbox.style.cursor = "pointer";
           checkbox.addEventListener("change", () => {
-            // Update pattern array on every toggle
-            track.pattern[i] = checkbox.checked;
+        // Update pattern array on every toggle
+        track.pattern[i] = checkbox.checked;
           });
           track.patternContainer.appendChild(checkbox);
         }
@@ -109,7 +144,7 @@ import * as THREE from 'three';
           // Rebuild pattern array for the new length
           const newPattern = new Array(val).fill(false);
           for (let i = 0; i < Math.min(val, track.numSteps); i++) {
-            newPattern[i] = track.pattern[i];
+        newPattern[i] = track.pattern[i];
           }
           track.numSteps = val;
           track.pattern = newPattern;
@@ -119,8 +154,14 @@ import * as THREE from 'three';
         });
       });
 
+      // Prevent pointer events on UI elements from affecting the 3D scene
+      document.querySelectorAll(".ui-checkbox, input[type='number']").forEach((elem) => {
+        elem.addEventListener("pointerdown", (event) => {
+          event.stopPropagation();
+        });
+      });
       // ===================== 5. CREATE ORBIT GROUPS =====================
-      const vanishDistance = 1000;
+      const vanishDistance = 1500;
       const recessionSpeed = 6;
       let lastSpawnTime = 0;
 
@@ -139,11 +180,14 @@ import * as THREE from 'three';
           color: 0xffffff,
           transparent: true,
           opacity: 0.66,
+          alphaHash: 0.66,
           depthWrite: false,
+          visible: true,
         });
         const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
         group.add(ellipseLine);
-      
+
+        
         // Build spheres based on the current track patterns
         const sphereGeom = new THREE.SphereGeometry(0.35, 12, 12);
         const spheres = []; // Store spheres here
@@ -156,9 +200,10 @@ import * as THREE from 'three';
             const sphereMat = new THREE.MeshBasicMaterial({
               color,
               transparent: true,
-              opacity: 0.5, // Lower opacity to allow blending
+              opacity: 0.85,
+              alphaHash: 0.85,
               blending: THREE.AdditiveBlending, // Enables color mixing
-              depthWrite: false, // Prevents depth-buffer conflicts
+              depthWrite: false,
             });
       
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
@@ -229,6 +274,8 @@ import * as THREE from 'three';
             allGroups.splice(idx, 1);
           }
         });
+        console.log(controls.getPolarAngle());
+        controls.update();
 
         renderer.render(scene, camera);
       }
@@ -236,20 +283,20 @@ import * as THREE from 'three';
       // ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
-        playerContainer.style.display = 'none';
-        animate();
+        // playerContainer.style.display = 'none';
+        // animate();
 
-      // let animationStarted = false;
-      // const audioElement = document.getElementById("audioPlayer");
-      // const playerContainer = document.getElementById("playerContainer");
+      let animationStarted = false;
+      const audioElement = document.getElementById("audioPlayer");
+      const playerContainer = document.getElementById("playerContainer");
 
-      // audioElement.addEventListener("play", () => {
-      //   if (!animationStarted) {
-      //     clock.start();
-      //     animationStarted = true;
-      //     animate();
-      //   }
+      audioElement.addEventListener("play", () => {
+        if (!animationStarted) {
+          clock.start();
+          animationStarted = true;
+          animate();
+        }
         
-      //   // Hide the audio element if you want
-      //   playerContainer.style.display = 'none';
-      // });
+        // Hide the audio element if you want
+        playerContainer.style.display = 'none';
+      });
