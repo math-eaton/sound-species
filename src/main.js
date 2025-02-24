@@ -33,13 +33,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
       let controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
-      controls.dampingFactor = 0.1; // Slight inertia for smoothness
+      controls.dampingFactor = 0.5; // Slight inertia for smoothness
       controls.enableZoom = false;
       controls.enablePan = false;
       controls.rotateSpeed = 0.05; // Reduce speed for a subtle effect
       
       // Restrict rotation to a narrow range (small tilts only)
-      const maxTilt = THREE.MathUtils.degToRad(10); // Max 10-degree tilt in any direction
+      const maxTilt = THREE.MathUtils.degToRad(10); // Max N-degree tilt in any direction
       controls.minPolarAngle = Math.PI / 2 - maxTilt; // Prevent excessive up/down movement
       controls.maxPolarAngle = Math.PI / 2 + maxTilt;
       controls.minAzimuthAngle = -maxTilt; // Prevent excessive left/right rotation
@@ -163,12 +163,12 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
       // ===================== 5. CREATE ORBIT GROUPS =====================
       const vanishDistance = 1500;
-      const recessionSpeed = 4;
+      const recessionVelocity = 4;
       let lastSpawnTime = 0;
 
       const tiltAngle = -Math.PI / 4;
       let orbitRotationOffset = 0;
-      let phaseOffset = 12; // degrees
+      let phaseOffset = 11; // degrees
 
       const allGroups = [];
       const clock = new THREE.Clock();
@@ -184,8 +184,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
             color: 0xffffff,
             transparent: true,
             opacity: 0.66,
-            // depthWrite: false,
-            visible: true,
+            // alphaHash: true,
+            // visible: false,
         });
         const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
         group.add(ellipseLine);
@@ -247,6 +247,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
                             color: 0xffffff,
                             transparent: true,
                             opacity: 0.5,
+                            alphaHash: true,
                             // depthTest: false, 
                         });
     
@@ -298,7 +299,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
             const age = elapsedTime - birthTime;
     
             // Recede
-            group.position.z = -age * recessionSpeed;
+            group.position.z = -age * recessionVelocity;
     
             // measureFraction for this bar
             const measureFraction = (age / measureDuration) % 1;
@@ -362,23 +363,23 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
       // ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
-        playerContainer.style.display = 'none';
-        animate();
+        // playerContainer.style.display = 'none';
+        // animate();
 
-      // let animationStarted = false;
-      // const audioElement = document.getElementById("audioPlayer");
-      // const playerContainer = document.getElementById("playerContainer");
-      // const uiContainer = document.getElementById("uiContainer");
-      // uiContainer.style.display = 'none';
+      let animationStarted = false;
+      const audioElement = document.getElementById("audioPlayer");
+      const playerContainer = document.getElementById("playerContainer");
+      const uiContainer = document.getElementById("uiContainer");
+      uiContainer.style.display = 'none';
 
 
-      // audioElement.addEventListener("play", () => {
-      //   if (!animationStarted) {
-      //     clock.start();
-      //     animationStarted = true;
-      //     animate();
-      //   }
+      audioElement.addEventListener("play", () => {
+        if (!animationStarted) {
+          clock.start();
+          animationStarted = true;
+          animate();
+        }
         
-      //   uiContainer.style.display = 'block';
-      //   playerContainer.style.display = 'none';
-      // });
+        uiContainer.style.display = 'block';
+        playerContainer.style.display = 'none';
+      });
