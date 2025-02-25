@@ -182,14 +182,14 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
         const group = new THREE.Group();
     
         // Ellipse line
-        const lineMat = new THREE.LineBasicMaterial({
+        const ellipseMat = new THREE.LineBasicMaterial({
             color: 0xffffff,
             transparent: true,
-            opacity: 0.66,
+            opacity: 0.22,
             // alphaHash: true,
             // visible: false,
         });
-        const ellipseLine = new THREE.Line(ellipseGeom, lineMat);
+        const ellipseLine = new THREE.Line(ellipseGeom, ellipseMat);
         group.add(ellipseLine);
     
         // Build spheres based on the current track patterns
@@ -245,7 +245,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
                         const lineGeom = new THREE.BufferGeometry();
                         lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     
-                        const lineMat = new THREE.LineBasicMaterial({
+                        const interLineMat = new THREE.LineBasicMaterial({
                             color: 0xffffff,
                             transparent: true,
                             opacity: 0.5,
@@ -253,7 +253,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
                             // depthTest: false, 
                         });
     
-                        const line = new THREE.Line(lineGeom, lineMat);
+                        const line = new THREE.Line(lineGeom, interLineMat);
                         line.userData = { sphereA: oldSphere, sphereB: newSphere };
     
                         scene.add(line);
@@ -295,7 +295,15 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
               const lineGeom = new THREE.BufferGeometry();
               lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-              const line = new THREE.Line(lineGeom, lineMat);
+              const intraLineMat = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.5,
+                alphaHash: true,
+                // depthTest: false, 
+            });
+
+              const line = new THREE.Line(lineGeom, intraLineMat);
               line.userData = { sphereA: sphere, sphereB: closestSphere };
 
               scene.add(line);
