@@ -175,6 +175,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
       const previousSpheres = {}; // Stores the last generation's spheres by color
       const connectionLines = []; // Stores the lines between generations
+      const intraGenLines = []; // Stores intra-generational lines
+
 
       function createOrbitGroup() {
         const group = new THREE.Group();
@@ -265,6 +267,41 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
         Object.keys(newSpheresByColor).forEach((color) => {
             previousSpheres[color] = newSpheresByColor[color];
         });
+
+        // Create intra-generational connections based on closest proximity
+        spheres.forEach(({ sphere }) => {
+          let closestSphere = null;
+          let minDist = Infinity;
+
+          spheres.forEach(({ sphere: otherSphere }) => {
+              if (sphere === otherSphere) return; // Don't connect to itself
+
+              const dist = sphere.position.distanceTo(otherSphere.position);
+              if (dist < minDist) {
+                  minDist = dist;
+                  closestSphere = otherSphere;
+              }
+          });
+
+          if (closestSphere) {
+              const posA = sphere.getWorldPosition(new THREE.Vector3());
+              const posB = closestSphere.getWorldPosition(new THREE.Vector3());
+
+              const positions = new Float32Array([
+                  posA.x, posA.y, posA.z,
+                  posB.x, posB.y, posB.z
+              ]);
+
+              const lineGeom = new THREE.BufferGeometry();
+              lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+              const line = new THREE.Line(lineGeom, lineMat);
+              line.userData = { sphereA: sphere, sphereB: closestSphere };
+
+              scene.add(line);
+              intraGenLines.push(line);
+          }
+      });
     
         // Store the spheres inside group.userData
         group.userData = { spheres, birthTime: 0 };
@@ -314,8 +351,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
         });
     
         // Update connection lines
-        connectionLines.forEach((line, index) => {
-            if (!line.userData.sphereA || !line.userData.sphereB) return; // Prevent undefined access
+        connectionLines.concat(intraGenLines).forEach((line) => {
+            if (!line.userData.sphereA || !line.userData.sphereB) return;
     
             const posA = line.userData.sphereA.getWorldPosition(new THREE.Vector3());
             const posB = line.userData.sphereB.getWorldPosition(new THREE.Vector3());
@@ -344,22 +381,22 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
             if (idx >= 0) allGroups.splice(idx, 1);
         });
     
-        // Remove old connection lines
-        for (let i = connectionLines.length - 1; i >= 0; i--) {
-            const line = connectionLines[i];
+        // Remove old intra-gen lines
+        for (let i = intraGenLines.length - 1; i >= 0; i--) {
+            const line = intraGenLines[i];
             if (
                 line.userData.sphereA.position.z < -vanishDistance ||
                 line.userData.sphereB.position.z < -vanishDistance
             ) {
                 scene.remove(line);
-                connectionLines.splice(i, 1);
+                intraGenLines.splice(i, 1);
             }
         }
     
         controls.update();
         renderer.render(scene, camera);
     }
-        
+            
       // ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
