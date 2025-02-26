@@ -1,5 +1,37 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import * as dat from 'dat.gui';
+
+// todo: add dat.gui for interfacing:
+// // - visibility: ellipses, intra lines, inter lines
+// // - colors: ellipses, intra lines, inter lines
+// // - speed: recession velocity
+// // - beats per minute
+// // 
+
+
+      // ===================== 0. CONFIG =====================
+      const config = {
+        // Ellipse lines
+        showEllipses: true,
+        ellipseColor: '#ffffff',
+        ellipseOpacity: 0.66,
+
+        // Inter lines
+        showInterLines: true,
+        interLineColor: '#ffffff',
+        interLineOpacity: 0.5,
+
+        // Intra (nearest-neighbor) lines
+        showIntraLines: true,
+        intraLineColor: '#ffffff',
+        intraLineOpacity: 0.5,
+
+        // Timing / Speed
+        recessionVelocity: 4,
+        BPM: 107.333,
+        phaseOffset: 11, // degrees
+      };
 
 
       // ===================== 1. SCENE SETUP =====================
@@ -26,7 +58,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
       // );
 
       camera.position.set(0, 0, 15);
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      const renderer = new THREE.WebGLRenderer({ antialias: false });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.domElement.className = 'three-container';
       document.body.appendChild(renderer.domElement);
@@ -51,10 +83,132 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
         renderer.setSize(window.innerWidth, window.innerHeight);
       });
 
+      // ===================== 1b. DAT.GUI SETUP =====================
+      const gui = new dat.GUI({
+        name: 'UI',
+         closeOnTop: true,
+         useLocalStorage: true,
+        });
+
+      // A single "Appearance" folder containing subfolders for each line type
+      const appearanceFolder = gui.addFolder('Appearance');
+
+      // Ellipse subfolder
+      const ellipseSub = appearanceFolder.addFolder('Ellipses');
+      ellipseSub.add(config, 'showEllipses')
+        .name('visible')
+        .onChange((value) => {
+          // Toggle ellipse visibility across all groups
+          allGroups.forEach((group) => {
+            const ellipseLine = group.children[0]; // The ellipse line is the first child
+            if (ellipseLine && ellipseLine.isLine) {
+              ellipseLine.visible = value;
+            }
+          });
+        });
+      // ellipseSub.addColor(config, 'ellipseColor')
+      //   .name('color')
+      //   .onChange((newColor) => {
+      //     allGroups.forEach((group) => {
+      //       const ellipseLine = group.children[0];
+      //       if (ellipseLine && ellipseLine.material) {
+      //         ellipseLine.material.color.set(newColor);
+      //       }
+      //     });
+      //   });
+      ellipseSub.add(config, 'ellipseOpacity', 0, 1, 0.01)
+        .name('opacity')
+        .onChange((newOpacity) => {
+          allGroups.forEach((group) => {
+            const ellipseLine = group.children[0];
+            if (ellipseLine && ellipseLine.material) {
+              ellipseLine.material.opacity = newOpacity;
+            }
+          });
+        });
+
+      // Inter lines subfolder
+      const interSub = appearanceFolder.addFolder('Inter Lines');
+      interSub.add(config, 'showInterLines')
+        .name('visible')
+        .onChange((value) => {
+          connectionLines.forEach((line) => {
+            line.visible = value;
+          });
+        });
+      // interSub.addColor(config, 'interLineColor')
+      //   .name('color')
+      //   .onChange((newColor) => {
+      //     connectionLines.forEach((line) => {
+      //       if (line.material) {
+      //         line.material.color.set(newColor);
+      //       }
+      //     });
+      //   });
+      interSub.add(config, 'interLineOpacity', 0, 1, 0.01)
+        .name('opacity')
+        .onChange((newOpacity) => {
+          connectionLines.forEach((line) => {
+            if (line.material) {
+              line.material.opacity = newOpacity;
+            }
+          });
+        });
+
+      // Intra lines subfolder
+      const intraSub = appearanceFolder.addFolder('Intra Lines');
+      intraSub.add(config, 'showIntraLines')
+        .name('visible')
+        .onChange((value) => {
+          intraGenLines.forEach((line) => {
+            line.visible = value;
+          });
+        });
+      // intraSub.addColor(config, 'intraLineColor')
+      //   .name('color')
+      //   .onChange((newColor) => {
+      //     intraGenLines.forEach((line) => {
+      //       if (line.material) {
+      //         line.material.color.set(newColor);
+      //       }
+      //     });
+      //   });
+      intraSub.add(config, 'intraLineOpacity', 0, 1, 0.01)
+        .name('opacity')
+        .onChange((newOpacity) => {
+          intraGenLines.forEach((line) => {
+            if (line.material) {
+              line.material.opacity = newOpacity;
+            }
+          });
+        });
+
+      // Music / Timing folder
+      const musicFolder = gui.addFolder('Timing');
+      musicFolder.add(config, 'recessionVelocity', -1, 10, 0.5)
+        .name('velocity');
+      musicFolder.add(config, 'BPM', 30, 200, 1)
+        .name('BPM')
+        .onChange((newBPM) => {
+          BPM = newBPM;
+          measureDuration = (4 * 60) / BPM;
+          spawnInterval = measureDuration;
+        });
+      musicFolder.add(config, 'phaseOffset', 0, 360, 1)
+        .name('phase offset')
+        .onChange((newPhaseOffset) => {
+          phaseOffset = newPhaseOffset;
+        });
+
+      // subfolder state
+      appearanceFolder.open();
+      // musicFolder.open();
+      gui.close(); 
+
       // ===================== 2. MUSIC / TIMING =====================
-      const BPM = 107.333;
-      const measureDuration = (4 * 60) / BPM; // ~2.243 seconds
-      const spawnInterval = measureDuration;
+      let BPM = config.BPM;
+      let measureDuration = (4 * 60) / BPM; // ~2.243 seconds
+      let spawnInterval = measureDuration;
 
       // ===================== 3. ELLIPSE GEOMETRY =====================
       function createEllipseGeometry(a, b, segments = 120) {
@@ -163,268 +317,282 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
       // ===================== 5. CREATE ORBIT GROUPS =====================
       const vanishDistance = 1500;
-      const recessionVelocity = 4;
       let lastSpawnTime = 0;
 
       const tiltAngle = -Math.PI / 4;
       let orbitRotationOffset = 0;
-      let phaseOffset = 11; // degrees
+      let phaseOffset = config.phaseOffset; // degrees
 
       const allGroups = [];
       const clock = new THREE.Clock();
 
-      const previousSpheres = {}; // Stores the last generation's spheres by color
-      const connectionLines = []; // Stores the lines between generations
-      const intraGenLines = []; // Stores intra-generational lines
-
+      const previousSpheres = {};   // Stores last generation's spheres by color
+      const connectionLines = [];   // Inter-generational lines
+      const intraGenLines = [];     // Intra-generational (nearest neighbor) lines
 
       function createOrbitGroup() {
         const group = new THREE.Group();
-    
+
         // Ellipse line
         const ellipseMat = new THREE.LineBasicMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.22,
-            // alphaHash: true,
-            // visible: false,
+          color: new THREE.Color(config.ellipseColor),
+          transparent: true,
+          opacity: config.ellipseOpacity,
         });
         const ellipseLine = new THREE.Line(ellipseGeom, ellipseMat);
+        ellipseLine.visible = config.showEllipses;
         group.add(ellipseLine);
-    
-        // Build spheres based on the current track patterns
-        const sphereGeom = new THREE.SphereGeometry(0.3, 12, 12);
-        const spheres = []; // Store spheres here
-        const newSpheresByColor = {}; // Temp storage for this generation's spheres
-    
+
+        // Build spheres
+        const sphereGeom = new THREE.SphereGeometry(0.35, 12, 12);
+        const spheres = [];
+        const newSpheresByColor = {};
+
         tracks.forEach((track) => {
-            const { color, pattern, numSteps } = track;
-            newSpheresByColor[color] = []; // Track new spheres for this color
-    
-            for (let step = 0; step < numSteps; step++) {
-                if (!pattern[step]) continue; // Skip if not active
-    
-                const sphereMat = new THREE.MeshBasicMaterial({
-                    color,
-                    transparent: true,
-                    opacity: 0.85,
-                    blending: THREE.AdditiveBlending,
-                    // depthWrite: false,
-                });
-    
-                const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-                const offsetAngle = 2 * Math.PI * (step / numSteps);
-                sphere.userData = { color, generation: allGroups.length };
-    
-                spheres.push({ sphere, offsetAngle });
-                newSpheresByColor[color].push(sphere);
-                group.add(sphere);
-            }
-        });
-    
-        // Create lines between previous and new spheres of the same color
-        Object.keys(newSpheresByColor).forEach((color) => {
-            if (previousSpheres[color]) {
-                previousSpheres[color].forEach((oldSphere, index) => {
-                    if (
-                        index < newSpheresByColor[color].length &&
-                        oldSphere &&
-                        newSpheresByColor[color][index]
-                    ) {
-                        const newSphere = newSpheresByColor[color][index];
-    
-                        // Get world positions of spheres
-                        const oldPos = oldSphere.getWorldPosition(new THREE.Vector3());
-                        const newPos = newSphere.getWorldPosition(new THREE.Vector3());
-    
-                        const positions = new Float32Array([
-                            oldPos.x, oldPos.y, oldPos.z,
-                            newPos.x, newPos.y, newPos.z
-                        ]);
-    
-                        const lineGeom = new THREE.BufferGeometry();
-                        lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    
-                        const interLineMat = new THREE.LineBasicMaterial({
-                            color: 0xffffff,
-                            transparent: true,
-                            opacity: 0.5,
-                            alphaHash: true,
-                            // depthTest: false, 
-                        });
-    
-                        const line = new THREE.Line(lineGeom, interLineMat);
-                        line.userData = { sphereA: oldSphere, sphereB: newSphere };
-    
-                        scene.add(line);
-                        connectionLines.push(line);
-                    }
-                });
-            }
-        });
-    
-        // Update previous spheres for the next generation
-        Object.keys(newSpheresByColor).forEach((color) => {
-            previousSpheres[color] = newSpheresByColor[color];
+          const { color, pattern, numSteps } = track;
+          newSpheresByColor[color] = [];
+
+          for (let step = 0; step < numSteps; step++) {
+            if (!pattern[step]) continue;
+
+            const sphereMat = new THREE.MeshBasicMaterial({
+              color,
+              transparent: true,
+              opacity: 0.85,
+              blending: THREE.AdditiveBlending,
+            });
+            const sphere = new THREE.Mesh(sphereGeom, sphereMat);
+            const offsetAngle = 2 * Math.PI * (step / numSteps);
+            sphere.userData = { color, generation: allGroups.length };
+
+            spheres.push({ sphere, offsetAngle });
+            newSpheresByColor[color].push(sphere);
+            group.add(sphere);
+          }
         });
 
-        // Create intra-generational connections based on closest proximity
+        // Inter-generational lines
+        Object.keys(newSpheresByColor).forEach((color) => {
+          if (previousSpheres[color]) {
+            previousSpheres[color].forEach((oldSphere, index) => {
+              if (
+                index < newSpheresByColor[color].length &&
+                oldSphere &&
+                newSpheresByColor[color][index]
+              ) {
+                const newSphere = newSpheresByColor[color][index];
+                const oldPos = oldSphere.getWorldPosition(new THREE.Vector3());
+                const newPos = newSphere.getWorldPosition(new THREE.Vector3());
+
+                const positions = new Float32Array([
+                  oldPos.x, oldPos.y, oldPos.z,
+                  newPos.x, newPos.y, newPos.z
+                ]);
+
+                const lineGeom = new THREE.BufferGeometry();
+                lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+                const interMat = new THREE.LineBasicMaterial({
+                  color: new THREE.Color(config.interLineColor),
+                  transparent: true,
+                  opacity: config.interLineOpacity,
+                  alphaHash: true,
+                });
+                const line = new THREE.Line(lineGeom, interMat);
+                line.visible = config.showInterLines;
+                line.userData = { sphereA: oldSphere, sphereB: newSphere };
+
+                scene.add(line);
+                connectionLines.push(line);
+              }
+            });
+          }
+        });
+
+        // Update previous spheres
+        Object.keys(newSpheresByColor).forEach((color) => {
+          previousSpheres[color] = newSpheresByColor[color];
+        });
+
+        // Intra-generational lines (nearest neighbor)
         spheres.forEach(({ sphere }) => {
           let closestSphere = null;
           let minDist = Infinity;
 
           spheres.forEach(({ sphere: otherSphere }) => {
-              if (sphere === otherSphere) return; // Don't connect to itself
-
-              const dist = sphere.position.distanceTo(otherSphere.position);
-              if (dist < minDist) {
-                  minDist = dist;
-                  closestSphere = otherSphere;
-              }
+            if (sphere === otherSphere) return;
+            const dist = sphere.position.distanceTo(otherSphere.position);
+            if (dist < minDist) {
+              minDist = dist;
+              closestSphere = otherSphere;
+            }
           });
 
           if (closestSphere) {
-              const posA = sphere.getWorldPosition(new THREE.Vector3());
-              const posB = closestSphere.getWorldPosition(new THREE.Vector3());
+            const posA = sphere.getWorldPosition(new THREE.Vector3());
+            const posB = closestSphere.getWorldPosition(new THREE.Vector3());
 
-              const positions = new Float32Array([
-                  posA.x, posA.y, posA.z,
-                  posB.x, posB.y, posB.z
-              ]);
+            const positions = new Float32Array([
+              posA.x, posA.y, posA.z,
+              posB.x, posB.y, posB.z
+            ]);
 
-              const lineGeom = new THREE.BufferGeometry();
-              lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const lineGeom = new THREE.BufferGeometry();
+            lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-              const intraLineMat = new THREE.LineBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.5,
-                alphaHash: true,
-                // depthTest: false, 
+            const intraLineMat = new THREE.LineBasicMaterial({
+              color: new THREE.Color(config.intraLineColor),
+              transparent: true,
+              opacity: config.intraLineOpacity,
+              alphaHash: true,
             });
+            const line = new THREE.Line(lineGeom, intraLineMat);
+            line.visible = config.showIntraLines;
+            line.userData = { sphereA: sphere, sphereB: closestSphere };
 
-              const line = new THREE.Line(lineGeom, intraLineMat);
-              line.userData = { sphereA: sphere, sphereB: closestSphere };
-
-              scene.add(line);
-              intraGenLines.push(line);
+            scene.add(line);
+            intraGenLines.push(line);
           }
-      });
-    
-        // Store the spheres inside group.userData
+        });
+
+        // Store in group
         group.userData = { spheres, birthTime: 0 };
-    
         return group;
-    }
-              
+      }
+
       // ===================== 6. ANIMATION LOOP =====================
       function animate() {
         requestAnimationFrame(animate);
         const elapsedTime = clock.getElapsedTime();
-    
-        // Spawn a new measure group every measure
+
+        const currentRecessionVelocity = config.recessionVelocity;
+
+        // Spawn a new group every measure
         if (elapsedTime - lastSpawnTime >= spawnInterval) {
-            lastSpawnTime = elapsedTime;
-            orbitRotationOffset += THREE.MathUtils.degToRad(phaseOffset);
-    
-            const group = createOrbitGroup();
-            group.rotation.x = tiltAngle;
-            group.rotation.y = orbitRotationOffset;
-            group.position.z = 0;
-            group.userData.birthTime = elapsedTime;
-    
-            scene.add(group);
-            allGroups.push(group);
+          lastSpawnTime = elapsedTime;
+          orbitRotationOffset += THREE.MathUtils.degToRad(config.phaseOffset);
+
+          const group = createOrbitGroup();
+          group.rotation.x = tiltAngle;
+          group.rotation.y = orbitRotationOffset;
+          group.position.z = 0;
+          group.userData.birthTime = elapsedTime;
+
+          scene.add(group);
+          allGroups.push(group);
         }
-    
-        // Update each measure group
+
+        // Update each group
         const toRemove = [];
         allGroups.forEach((group) => {
-            const { spheres, birthTime } = group.userData;
-            const age = elapsedTime - birthTime;
-    
-            // Recede
-            group.position.z = -age * recessionVelocity;
-    
-            // measureFraction for this bar
-            const measureFraction = (age / measureDuration) % 1;
-    
-            // Update each sphere
-            spheres.forEach(({ sphere, offsetAngle }) => {
-                const angle = 2 * Math.PI * measureFraction + offsetAngle;
-                sphere.position.x = a * Math.cos(angle);
-                sphere.position.y = 0;
-                sphere.position.z = b * Math.sin(angle);
-            });
+          const { spheres, birthTime } = group.userData;
+          const age = elapsedTime - birthTime;
+
+          group.position.z = -age * currentRecessionVelocity;
+          const measureFraction = (age / measureDuration) % 1;
+
+          // Update each sphere
+          spheres.forEach(({ sphere, offsetAngle }) => {
+            const angle = 2 * Math.PI * measureFraction + offsetAngle;
+            sphere.position.x = a * Math.cos(angle);
+            sphere.position.y = 0;
+            sphere.position.z = b * Math.sin(angle);
+          });
+
+          if (group.position.z < -vanishDistance) {
+            toRemove.push(group);
+          }
         });
-    
-        // Update connection lines
+
+        // Update both inter and intra lines
         connectionLines.concat(intraGenLines).forEach((line) => {
-            if (!line.userData.sphereA || !line.userData.sphereB) return;
-    
-            const posA = line.userData.sphereA.getWorldPosition(new THREE.Vector3());
-            const posB = line.userData.sphereB.getWorldPosition(new THREE.Vector3());
-    
-            const positions = line.geometry.attributes.position.array;
-            positions[0] = posA.x;
-            positions[1] = posA.y;
-            positions[2] = posA.z;
-            positions[3] = posB.x;
-            positions[4] = posB.y;
-            positions[5] = posB.z;
-    
-            line.geometry.attributes.position.needsUpdate = true;
-        });
-    
-        // Remove old groups and their connection lines
-        allGroups.forEach((group) => {
-            if (group.position.z < -vanishDistance) {
-                toRemove.push(group);
+          // Respect toggles for each line type
+          if (connectionLines.includes(line)) {
+            // Inter line
+            line.visible = config.showInterLines;
+            if (line.material) {
+              line.material.color.set(config.interLineColor);
+              line.material.opacity = config.interLineOpacity;
             }
+          } else {
+            // Intra line
+            line.visible = config.showIntraLines;
+            if (line.material) {
+              line.material.color.set(config.intraLineColor);
+              line.material.opacity = config.intraLineOpacity;
+            }
+          }
+
+          // Update geometry positions
+          if (!line.userData.sphereA || !line.userData.sphereB) return;
+          const posA = line.userData.sphereA.getWorldPosition(new THREE.Vector3());
+          const posB = line.userData.sphereB.getWorldPosition(new THREE.Vector3());
+          const positions = line.geometry.attributes.position.array;
+          positions[0] = posA.x;
+          positions[1] = posA.y;
+          positions[2] = posA.z;
+          positions[3] = posB.x;
+          positions[4] = posB.y;
+          positions[5] = posB.z;
+          line.geometry.attributes.position.needsUpdate = true;
         });
-    
+
+        // Remove old groups
         toRemove.forEach((g) => {
-            scene.remove(g);
-            const idx = allGroups.indexOf(g);
-            if (idx >= 0) allGroups.splice(idx, 1);
+          scene.remove(g);
+          const idx = allGroups.indexOf(g);
+          if (idx >= 0) allGroups.splice(idx, 1);
         });
-    
-        // Remove old intra-gen lines
-        for (let i = intraGenLines.length - 1; i >= 0; i--) {
-            const line = intraGenLines[i];
-            if (
-                line.userData.sphereA.position.z < -vanishDistance ||
-                line.userData.sphereB.position.z < -vanishDistance
-            ) {
-                scene.remove(line);
-                intraGenLines.splice(i, 1);
-            }
+
+        // Remove old inter lines
+        for (let i = connectionLines.length - 1; i >= 0; i--) {
+          const line = connectionLines[i];
+          if (
+            line.userData.sphereA.position.z < -vanishDistance ||
+            line.userData.sphereB.position.z < -vanishDistance
+          ) {
+            scene.remove(line);
+            connectionLines.splice(i, 1);
+          }
         }
-    
+
+        // Remove old intra lines
+        for (let i = intraGenLines.length - 1; i >= 0; i--) {
+          const line = intraGenLines[i];
+          if (
+            line.userData.sphereA.position.z < -vanishDistance ||
+            line.userData.sphereB.position.z < -vanishDistance
+          ) {
+            scene.remove(line);
+            intraGenLines.splice(i, 1);
+          }
+        }
+
         controls.update();
         renderer.render(scene, camera);
-    }
-            
-      // ===================== 7. AUDIO + START =====================
+      }
+
+
+// ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
-        // playerContainer.style.display = 'none';
-        // animate();
-
-      let animationStarted = false;
-      const audioElement = document.getElementById("audioPlayer");
-      const playerContainer = document.getElementById("playerContainer");
-      const uiContainer = document.getElementById("uiContainer");
-      uiContainer.style.display = 'none';
-
-
-      audioElement.addEventListener("play", () => {
-        if (!animationStarted) {
-          clock.start();
-          animationStarted = true;
-          animate();
-        }
-        
-        uiContainer.style.display = 'block';
         playerContainer.style.display = 'none';
-      });
+        animate();
+
+      // let animationStarted = false;
+      // const audioElement = document.getElementById("audioPlayer");
+      // const playerContainer = document.getElementById("playerContainer");
+      // const uiContainer = document.getElementById("uiContainer");
+      // uiContainer.style.display = 'none';
+
+
+      // audioElement.addEventListener("play", () => {
+      //   if (!animationStarted) {
+      //     clock.start();
+      //     animationStarted = true;
+      //     animate();
+      //   }
+        
+      //   uiContainer.style.display = 'block';
+      //   playerContainer.style.display = 'none';
+      // });
