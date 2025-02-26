@@ -12,6 +12,11 @@ import * as dat from 'dat.gui';
 
       // ===================== 0. CONFIG =====================
       const config = {
+
+        // Sphere settings
+        sphereOpacity: 0.85,
+        sphereSize: 0.35,
+
         // Ellipse lines
         showEllipses: true,
         ellipseColor: '#ffffff',
@@ -86,26 +91,51 @@ import * as dat from 'dat.gui';
       // ===================== 1b. DAT.GUI SETUP =====================
       const gui = new dat.GUI({
         name: 'UI',
-         closeOnTop: true,
-         useLocalStorage: true,
-        });
+        closeOnTop: true,
+        useLocalStorage: true,
+      });
 
       // A single "Appearance" folder containing subfolders for each line type
-      const appearanceFolder = gui.addFolder('Appearance');
-
-      // Ellipse subfolder
-      const ellipseSub = appearanceFolder.addFolder('Ellipses');
-      ellipseSub.add(config, 'showEllipses')
-        .name('visible')
-        .onChange((value) => {
-          // Toggle ellipse visibility across all groups
+      const appearanceFolder = gui.addFolder('APPEARANCE');
+      
+      // Sphere subfolder
+      const sphereSub = appearanceFolder.addFolder('SPHERES');
+      sphereSub.add(config, 'sphereOpacity', 0, 1, 0.01)
+        .name('opacity')
+        .onChange((newOpacity) => {
           allGroups.forEach((group) => {
-            const ellipseLine = group.children[0]; // The ellipse line is the first child
-            if (ellipseLine && ellipseLine.isLine) {
-              ellipseLine.visible = value;
-            }
+        group.children.forEach((child) => {
+          if (child.isMesh) {
+            child.material.opacity = newOpacity;
+          }
+        });
           });
         });
+      sphereSub.add(config, 'sphereSize', 0.1, 2, 0.01)
+        .name('size')
+        .onChange((newSize) => {
+          allGroups.forEach((group) => {
+        group.children.forEach((child) => {
+          if (child.isMesh) {
+            child.scale.set(newSize, newSize, newSize);
+          }
+        });
+          });
+        });
+      
+      // Ellipse subfolder
+      const ellipseSub = appearanceFolder.addFolder('ELLIPSES');
+      // ellipseSub.add(config, 'showEllipses')
+      //   .name('visible')
+      //   .onChange((value) => {
+      //     // Toggle ellipse visibility across all groups
+      //     allGroups.forEach((group) => {
+      //   const ellipseLine = group.children[0]; // The ellipse line is the first child
+      //   if (ellipseLine && ellipseLine.isLine) {
+      //     ellipseLine.visible = value;
+      //   }
+      //     });
+      //   });
       // ellipseSub.addColor(config, 'ellipseColor')
       //   .name('color')
       //   .onChange((newColor) => {
@@ -120,22 +150,23 @@ import * as dat from 'dat.gui';
         .name('opacity')
         .onChange((newOpacity) => {
           allGroups.forEach((group) => {
-            const ellipseLine = group.children[0];
-            if (ellipseLine && ellipseLine.material) {
-              ellipseLine.material.opacity = newOpacity;
-            }
+        const ellipseLine = group.children[0];
+        if (ellipseLine && ellipseLine.material) {
+          ellipseLine.material.opacity = newOpacity;
+        }
           });
         });
 
+
       // Inter lines subfolder
-      const interSub = appearanceFolder.addFolder('Inter Lines');
-      interSub.add(config, 'showInterLines')
-        .name('visible')
-        .onChange((value) => {
-          connectionLines.forEach((line) => {
-            line.visible = value;
-          });
-        });
+      const interSub = appearanceFolder.addFolder('INTER');
+      // interSub.add(config, 'showInterLines')
+      //   .name('visible')
+      //   .onChange((value) => {
+      //     connectionLines.forEach((line) => {
+      //       line.visible = value;
+      //     });
+      //   });
       // interSub.addColor(config, 'interLineColor')
       //   .name('color')
       //   .onChange((newColor) => {
@@ -156,14 +187,14 @@ import * as dat from 'dat.gui';
         });
 
       // Intra lines subfolder
-      const intraSub = appearanceFolder.addFolder('Intra Lines');
-      intraSub.add(config, 'showIntraLines')
-        .name('visible')
-        .onChange((value) => {
-          intraGenLines.forEach((line) => {
-            line.visible = value;
-          });
-        });
+      const intraSub = appearanceFolder.addFolder('INTRA');
+      // intraSub.add(config, 'showIntraLines')
+      //   .name('visible')
+      //   .onChange((value) => {
+      //     intraGenLines.forEach((line) => {
+      //       line.visible = value;
+      //     });
+      //   });
       // intraSub.addColor(config, 'intraLineColor')
       //   .name('color')
       //   .onChange((newColor) => {
@@ -184,9 +215,9 @@ import * as dat from 'dat.gui';
         });
 
       // Music / Timing folder
-      const musicFolder = gui.addFolder('Timing');
+      const musicFolder = gui.addFolder('TIMING');
       musicFolder.add(config, 'recessionVelocity', -1, 10, 0.5)
-        .name('velocity');
+        .name('VELOCITY');
       musicFolder.add(config, 'BPM', 30, 200, 1)
         .name('BPM')
         .onChange((newBPM) => {
@@ -195,7 +226,7 @@ import * as dat from 'dat.gui';
           spawnInterval = measureDuration;
         });
       musicFolder.add(config, 'phaseOffset', 0, 360, 1)
-        .name('phase offset')
+        .name('PHASE OFFSET')
         .onChange((newPhaseOffset) => {
           phaseOffset = newPhaseOffset;
         });
@@ -358,8 +389,9 @@ import * as dat from 'dat.gui';
             const sphereMat = new THREE.MeshBasicMaterial({
               color,
               transparent: true,
-              opacity: 0.85,
+              opacity: config.sphereOpacity,
               blending: THREE.AdditiveBlending,
+              depthTest: false,
             });
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
             const offsetAngle = 2 * Math.PI * (step / numSteps);
