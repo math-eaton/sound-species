@@ -32,6 +32,10 @@ import * as dat from 'dat.gui';
         intraLineColor: '#ffffff',
         intraLineOpacity: 0.5,
 
+        // Eccentricity of the orbit ellipses
+        // 0 => perfect circle, close to 1 => extremely narrow ellipse
+        ellipseEcc: 0.3,
+
         // Timing / Speed
         recessionVelocity: 4,
         BPM: 107.333,
@@ -157,6 +161,12 @@ import * as dat from 'dat.gui';
           });
         });
 
+        ellipseSub.add(config, 'ellipseEcc', 0, 0.99, 0.01)
+        .name('Ellipse Ecc')
+        .onChange(() => {
+          updateAllEllipseGeometry();
+        });
+
 
       // Inter lines subfolder
       const interSub = appearanceFolder.addFolder('INTER');
@@ -214,6 +224,7 @@ import * as dat from 'dat.gui';
           });
         });
 
+
       // Music / Timing folder
       const musicFolder = gui.addFolder('TIMING');
       musicFolder.add(config, 'recessionVelocity', -1, 10, 0.5)
@@ -242,26 +253,55 @@ import * as dat from 'dat.gui';
       let spawnInterval = measureDuration;
 
       // ===================== 3. ELLIPSE GEOMETRY =====================
-      function createEllipseGeometry(a, b, segments = 120) {
-        const ellipseCurve = new THREE.EllipseCurve(
-          0, 0, // center
-          a, b, // radii
-          0, 2 * Math.PI
-        );
-        const points = ellipseCurve.getPoints(segments);
+      const ellipseSegments = 120;
+      // We'll create a single shared geometry for all ellipse lines.
+      const ellipseGeom = new THREE.BufferGeometry();
+      let a = 10;
+      let e = config.ellipseEcc;
+      let b = a * Math.sqrt(1 - e * e);
+      initializeEllipseGeometry(ellipseGeom, a, b, ellipseSegments);
 
-        const geom = new THREE.BufferGeometry().setFromPoints(points);
-        const arr = geom.attributes.position.array;
-        for (let i = 0; i < arr.length; i += 3) {
-          const oldY = arr[i + 1];
-          arr[i + 1] = 0; // Flatten to Y=0
-          arr[i + 2] = oldY; // Move old Y to Z
+      // Helper: build initial geometry
+      function initializeEllipseGeometry(geom, a, b, segments) {
+        const curve = new THREE.EllipseCurve(0, 0, a, b, 0, 2 * Math.PI);
+        const points = curve.getPoints(segments);
+        const positions = new Float32Array(points.length * 3);
+
+        for (let i = 0; i < points.length; i++) {
+          const x = points[i].x;
+          const y = points[i].y;
+          // Flatten to Y=0, move old Y to Z
+          positions[i * 3 + 0] = x;
+          positions[i * 3 + 1] = 0;
+          positions[i * 3 + 2] = y;
         }
-        return geom;
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geom.computeBoundingSphere();
       }
-      const a = 10;
-      const b = 7;
-      const ellipseGeom = createEllipseGeometry(a, b);
+
+      // Helper: recalc geometry on eccentricity changes
+      function updateAllEllipseGeometry() {
+        // Let a = 10, and derive b from the current e
+        // e = config.ellipseEcc => b = a * sqrt(1 - e^2)
+        let a = 10;
+        let e = config.ellipseEcc;
+        let b = a * Math.sqrt(1 - e * e);
+
+        // Overwrite the shared geometry
+        const curve = new THREE.EllipseCurve(0, 0, a, b, 0, 2 * Math.PI);
+        const points = curve.getPoints(ellipseSegments);
+        const positions = ellipseGeom.attributes.position.array;
+
+        for (let i = 0; i < points.length; i++) {
+          const x = points[i].x;
+          const y = points[i].y; // Flatten
+          positions[i * 3 + 0] = x;
+          positions[i * 3 + 1] = 0;
+          positions[i * 3 + 2] = y;
+        }
+        ellipseGeom.attributes.position.needsUpdate = true;
+        ellipseGeom.computeBoundingSphere();
+      }
 
       // ===================== 4. GLOBAL PATTERNS & UI =====================
       // Instead of a single array, let's store everything in an array of track objects:
@@ -498,6 +538,11 @@ import * as dat from 'dat.gui';
         const elapsedTime = clock.getElapsedTime();
 
         const currentRecessionVelocity = config.recessionVelocity;
+
+        let e = config.ellipseEcc;
+        let a = 10;
+        let b = a * Math.sqrt(1 - e * e);
+          
 
         // Spawn a new group every measure
         if (elapsedTime - lastSpawnTime >= spawnInterval) {
