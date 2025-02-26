@@ -9,26 +9,30 @@ import * as dat from 'dat.gui';
 // // - beats per minute
 // // 
 
-      // ===================== 0. CONFIG =====================
 
+      // ===================== 0. CONFIG =====================
       const config = {
-        // Visibility
+        // Ellipse lines
         showEllipses: true,
-        showInterLines: true,
-      
-        // Ellipse appearance
         ellipseColor: '#ffffff',
         ellipseOpacity: 0.66,
-      
-        // Inter line appearance
+
+        // Inter lines
+        showInterLines: true,
         interLineColor: '#ffffff',
         interLineOpacity: 0.5,
-      
+
+        // Intra (nearest-neighbor) lines
+        showIntraLines: true,
+        intraLineColor: '#ffffff',
+        intraLineOpacity: 0.5,
+
         // Timing / Speed
         recessionVelocity: 4,
         BPM: 107.333,
+        phaseOffset: 11, // degrees
       };
-            
+
 
       // ===================== 1. SCENE SETUP =====================
       const scene = new THREE.Scene();
@@ -80,12 +84,19 @@ import * as dat from 'dat.gui';
       });
 
       // ===================== 1b. DAT.GUI SETUP =====================
-      const gui = new dat.GUI();
+      const gui = new dat.GUI({
+        name: 'UI',
+         closeOnTop: true,
+         useLocalStorage: true,
+        });
 
-      // --- Visibility folder ---
-      const visibilityFolder = gui.addFolder('Visibility');
-      visibilityFolder.add(config, 'showEllipses')
-        .name('Show Ellipses')
+      // A single "Appearance" folder containing subfolders for each line type
+      const appearanceFolder = gui.addFolder('Appearance');
+
+      // Ellipse subfolder
+      const ellipseSub = appearanceFolder.addFolder('Ellipses');
+      ellipseSub.add(config, 'showEllipses')
+        .name('visible')
         .onChange((value) => {
           // Toggle ellipse visibility across all groups
           allGroups.forEach((group) => {
@@ -95,29 +106,18 @@ import * as dat from 'dat.gui';
             }
           });
         });
-
-      visibilityFolder.add(config, 'showInterLines')
-        .name('Show Inter Lines')
-        .onChange((value) => {
-          connectionLines.forEach((line) => {
-            line.visible = value;
-          });
-        });
-
-      // --- Ellipse Appearance folder ---
-      const ellipseFolder = gui.addFolder('Ellipse Appearance');
-      ellipseFolder.addColor(config, 'ellipseColor')
-        .name('Ellipse Color')
-        .onChange((newColor) => {
-          allGroups.forEach((group) => {
-            const ellipseLine = group.children[0];
-            if (ellipseLine && ellipseLine.material) {
-              ellipseLine.material.color.set(newColor);
-            }
-          });
-        });
-      ellipseFolder.add(config, 'ellipseOpacity', 0, 1, 0.01)
-        .name('Ellipse Opacity')
+      // ellipseSub.addColor(config, 'ellipseColor')
+      //   .name('color')
+      //   .onChange((newColor) => {
+      //     allGroups.forEach((group) => {
+      //       const ellipseLine = group.children[0];
+      //       if (ellipseLine && ellipseLine.material) {
+      //         ellipseLine.material.color.set(newColor);
+      //       }
+      //     });
+      //   });
+      ellipseSub.add(config, 'ellipseOpacity', 0, 1, 0.01)
+        .name('opacity')
         .onChange((newOpacity) => {
           allGroups.forEach((group) => {
             const ellipseLine = group.children[0];
@@ -127,44 +127,83 @@ import * as dat from 'dat.gui';
           });
         });
 
-      // --- Inter Lines Appearance folder ---
-      const interLinesFolder = gui.addFolder('Inter Lines Appearance');
-      interLinesFolder.addColor(config, 'interLineColor')
-        .name('Inter Lines Color')
-        .onChange((newColor) => {
+      // Inter lines subfolder
+      const interSub = appearanceFolder.addFolder('Inter Lines');
+      interSub.add(config, 'showInterLines')
+        .name('visible')
+        .onChange((value) => {
           connectionLines.forEach((line) => {
-            if (line && line.material) {
-              line.material.color.set(newColor);
-            }
+            line.visible = value;
           });
         });
-      interLinesFolder.add(config, 'interLineOpacity', 0, 1, 0.01)
-        .name('Inter Lines Opacity')
+      // interSub.addColor(config, 'interLineColor')
+      //   .name('color')
+      //   .onChange((newColor) => {
+      //     connectionLines.forEach((line) => {
+      //       if (line.material) {
+      //         line.material.color.set(newColor);
+      //       }
+      //     });
+      //   });
+      interSub.add(config, 'interLineOpacity', 0, 1, 0.01)
+        .name('opacity')
         .onChange((newOpacity) => {
           connectionLines.forEach((line) => {
-            if (line && line.material) {
+            if (line.material) {
               line.material.opacity = newOpacity;
             }
           });
         });
 
-      // --- Music / Timing folder ---
-      const musicFolder = gui.addFolder('Music / Timing');
-      musicFolder.add(config, 'recessionVelocity', 0, 20, 0.5)
-        .name('Recession Speed');
-      musicFolder.add(config, 'BPM', 60, 200, 1)
-        .name('Beats per Minute')
+      // Intra lines subfolder
+      const intraSub = appearanceFolder.addFolder('Intra Lines');
+      intraSub.add(config, 'showIntraLines')
+        .name('visible')
+        .onChange((value) => {
+          intraGenLines.forEach((line) => {
+            line.visible = value;
+          });
+        });
+      // intraSub.addColor(config, 'intraLineColor')
+      //   .name('color')
+      //   .onChange((newColor) => {
+      //     intraGenLines.forEach((line) => {
+      //       if (line.material) {
+      //         line.material.color.set(newColor);
+      //       }
+      //     });
+      //   });
+      intraSub.add(config, 'intraLineOpacity', 0, 1, 0.01)
+        .name('opacity')
+        .onChange((newOpacity) => {
+          intraGenLines.forEach((line) => {
+            if (line.material) {
+              line.material.opacity = newOpacity;
+            }
+          });
+        });
+
+      // Music / Timing folder
+      const musicFolder = gui.addFolder('Timing');
+      musicFolder.add(config, 'recessionVelocity', -1, 10, 0.5)
+        .name('velocity');
+      musicFolder.add(config, 'BPM', 30, 200, 1)
+        .name('BPM')
         .onChange((newBPM) => {
           BPM = newBPM;
           measureDuration = (4 * 60) / BPM;
           spawnInterval = measureDuration;
         });
+      musicFolder.add(config, 'phaseOffset', 0, 360, 1)
+        .name('phase offset')
+        .onChange((newPhaseOffset) => {
+          phaseOffset = newPhaseOffset;
+        });
 
-      // Optionally close folders
-      visibilityFolder.close();
-      ellipseFolder.close();
-      interLinesFolder.close();
-      musicFolder.close();
+      // subfolder state
+      appearanceFolder.open();
+      // musicFolder.open();
+      gui.close(); 
 
       // ===================== 2. MUSIC / TIMING =====================
       let BPM = config.BPM;
@@ -282,27 +321,26 @@ import * as dat from 'dat.gui';
 
       const tiltAngle = -Math.PI / 4;
       let orbitRotationOffset = 0;
-      let phaseOffset = 11; // degrees
+      let phaseOffset = config.phaseOffset; // degrees
 
       const allGroups = [];
       const clock = new THREE.Clock();
 
-      const previousSpheres = {};     // Stores the last generation's spheres by color
-      const connectionLines = [];     // Stores the lines between generations
+      const previousSpheres = {};   // Stores last generation's spheres by color
+      const connectionLines = [];   // Inter-generational lines
+      const intraGenLines = [];     // Intra-generational (nearest neighbor) lines
 
       function createOrbitGroup() {
         const group = new THREE.Group();
 
-        // Ellipse line material
+        // Ellipse line
         const ellipseMat = new THREE.LineBasicMaterial({
           color: new THREE.Color(config.ellipseColor),
           transparent: true,
           opacity: config.ellipseOpacity,
         });
-
-        // Ellipse line
         const ellipseLine = new THREE.Line(ellipseGeom, ellipseMat);
-        ellipseLine.visible = config.showEllipses; // respect toggle
+        ellipseLine.visible = config.showEllipses;
         group.add(ellipseLine);
 
         // Build spheres
@@ -315,7 +353,7 @@ import * as dat from 'dat.gui';
           newSpheresByColor[color] = [];
 
           for (let step = 0; step < numSteps; step++) {
-            if (!pattern[step]) continue; // skip if not active
+            if (!pattern[step]) continue;
 
             const sphereMat = new THREE.MeshBasicMaterial({
               color,
@@ -323,7 +361,6 @@ import * as dat from 'dat.gui';
               opacity: 0.85,
               blending: THREE.AdditiveBlending,
             });
-
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
             const offsetAngle = 2 * Math.PI * (step / numSteps);
             sphere.userData = { color, generation: allGroups.length };
@@ -334,7 +371,7 @@ import * as dat from 'dat.gui';
           }
         });
 
-        // Create inter lines between previous and new spheres of the same color
+        // Inter-generational lines
         Object.keys(newSpheresByColor).forEach((color) => {
           if (previousSpheres[color]) {
             previousSpheres[color].forEach((oldSphere, index) => {
@@ -344,8 +381,6 @@ import * as dat from 'dat.gui';
                 newSpheresByColor[color][index]
               ) {
                 const newSphere = newSpheresByColor[color][index];
-
-                // Get positions of spheres
                 const oldPos = oldSphere.getWorldPosition(new THREE.Vector3());
                 const newPos = newSphere.getWorldPosition(new THREE.Vector3());
 
@@ -355,23 +390,18 @@ import * as dat from 'dat.gui';
                 ]);
 
                 const lineGeom = new THREE.BufferGeometry();
-                lineGeom.setAttribute(
-                  'position',
-                  new THREE.BufferAttribute(positions, 3)
-                );
+                lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-                // Inter line material
                 const interMat = new THREE.LineBasicMaterial({
                   color: new THREE.Color(config.interLineColor),
                   transparent: true,
                   opacity: config.interLineOpacity,
                   alphaHash: true,
                 });
-
                 const line = new THREE.Line(lineGeom, interMat);
-                line.visible = config.showInterLines; // respect toggle
-
+                line.visible = config.showInterLines;
                 line.userData = { sphereA: oldSphere, sphereB: newSphere };
+
                 scene.add(line);
                 connectionLines.push(line);
               }
@@ -379,12 +409,53 @@ import * as dat from 'dat.gui';
           }
         });
 
-        // Update previous spheres for next generation
+        // Update previous spheres
         Object.keys(newSpheresByColor).forEach((color) => {
           previousSpheres[color] = newSpheresByColor[color];
         });
 
-        // Store in group data
+        // Intra-generational lines (nearest neighbor)
+        spheres.forEach(({ sphere }) => {
+          let closestSphere = null;
+          let minDist = Infinity;
+
+          spheres.forEach(({ sphere: otherSphere }) => {
+            if (sphere === otherSphere) return;
+            const dist = sphere.position.distanceTo(otherSphere.position);
+            if (dist < minDist) {
+              minDist = dist;
+              closestSphere = otherSphere;
+            }
+          });
+
+          if (closestSphere) {
+            const posA = sphere.getWorldPosition(new THREE.Vector3());
+            const posB = closestSphere.getWorldPosition(new THREE.Vector3());
+
+            const positions = new Float32Array([
+              posA.x, posA.y, posA.z,
+              posB.x, posB.y, posB.z
+            ]);
+
+            const lineGeom = new THREE.BufferGeometry();
+            lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const intraLineMat = new THREE.LineBasicMaterial({
+              color: new THREE.Color(config.intraLineColor),
+              transparent: true,
+              opacity: config.intraLineOpacity,
+              alphaHash: true,
+            });
+            const line = new THREE.Line(lineGeom, intraLineMat);
+            line.visible = config.showIntraLines;
+            line.userData = { sphereA: sphere, sphereB: closestSphere };
+
+            scene.add(line);
+            intraGenLines.push(line);
+          }
+        });
+
+        // Store in group
         group.userData = { spheres, birthTime: 0 };
         return group;
       }
@@ -394,13 +465,12 @@ import * as dat from 'dat.gui';
         requestAnimationFrame(animate);
         const elapsedTime = clock.getElapsedTime();
 
-        // Use config.recessionVelocity
-        const currentRecessionSpeed = config.recessionVelocity;
+        const currentRecessionVelocity = config.recessionVelocity;
 
         // Spawn a new group every measure
         if (elapsedTime - lastSpawnTime >= spawnInterval) {
           lastSpawnTime = elapsedTime;
-          orbitRotationOffset += THREE.MathUtils.degToRad(phaseOffset);
+          orbitRotationOffset += THREE.MathUtils.degToRad(config.phaseOffset);
 
           const group = createOrbitGroup();
           group.rotation.x = tiltAngle;
@@ -412,32 +482,48 @@ import * as dat from 'dat.gui';
           allGroups.push(group);
         }
 
-        // Update groups
+        // Update each group
         const toRemove = [];
         allGroups.forEach((group) => {
           const { spheres, birthTime } = group.userData;
           const age = elapsedTime - birthTime;
 
-          // Move group along Z axis
-          group.position.z = -age * currentRecessionSpeed;
-
-          // measureFraction
+          group.position.z = -age * currentRecessionVelocity;
           const measureFraction = (age / measureDuration) % 1;
 
-          // Position each sphere on its ellipse
+          // Update each sphere
           spheres.forEach(({ sphere, offsetAngle }) => {
             const angle = 2 * Math.PI * measureFraction + offsetAngle;
             sphere.position.x = a * Math.cos(angle);
             sphere.position.y = 0;
             sphere.position.z = b * Math.sin(angle);
           });
+
+          if (group.position.z < -vanishDistance) {
+            toRemove.push(group);
+          }
         });
 
-        // Update inter lines
-        connectionLines.forEach((line) => {
-          // Respect showInterLines
-          line.visible = config.showInterLines;
+        // Update both inter and intra lines
+        connectionLines.concat(intraGenLines).forEach((line) => {
+          // Respect toggles for each line type
+          if (connectionLines.includes(line)) {
+            // Inter line
+            line.visible = config.showInterLines;
+            if (line.material) {
+              line.material.color.set(config.interLineColor);
+              line.material.opacity = config.interLineOpacity;
+            }
+          } else {
+            // Intra line
+            line.visible = config.showIntraLines;
+            if (line.material) {
+              line.material.color.set(config.intraLineColor);
+              line.material.opacity = config.intraLineOpacity;
+            }
+          }
 
+          // Update geometry positions
           if (!line.userData.sphereA || !line.userData.sphereB) return;
           const posA = line.userData.sphereA.getWorldPosition(new THREE.Vector3());
           const posB = line.userData.sphereB.getWorldPosition(new THREE.Vector3());
@@ -452,18 +538,13 @@ import * as dat from 'dat.gui';
         });
 
         // Remove old groups
-        allGroups.forEach((group) => {
-          if (group.position.z < -vanishDistance) {
-            toRemove.push(group);
-          }
-        });
         toRemove.forEach((g) => {
           scene.remove(g);
           const idx = allGroups.indexOf(g);
           if (idx >= 0) allGroups.splice(idx, 1);
         });
 
-        // Remove old connection lines
+        // Remove old inter lines
         for (let i = connectionLines.length - 1; i >= 0; i--) {
           const line = connectionLines[i];
           if (
@@ -475,10 +556,24 @@ import * as dat from 'dat.gui';
           }
         }
 
+        // Remove old intra lines
+        for (let i = intraGenLines.length - 1; i >= 0; i--) {
+          const line = intraGenLines[i];
+          if (
+            line.userData.sphereA.position.z < -vanishDistance ||
+            line.userData.sphereB.position.z < -vanishDistance
+          ) {
+            scene.remove(line);
+            intraGenLines.splice(i, 1);
+          }
+        }
+
         controls.update();
         renderer.render(scene, camera);
       }
-      // ===================== 7. AUDIO + START =====================
+
+
+// ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
         playerContainer.style.display = 'none';
