@@ -105,7 +105,7 @@ import * as dat from 'dat.gui';
       // Sphere subfolder
       const sphereSub = appearanceFolder.addFolder('SPHERES');
       sphereSub.add(config, 'sphereOpacity', 0, 1, 0.01)
-        .name('opacity')
+        .name('OPACITY')
         .onChange((newOpacity) => {
           allGroups.forEach((group) => {
         group.children.forEach((child) => {
@@ -116,7 +116,7 @@ import * as dat from 'dat.gui';
           });
         });
       sphereSub.add(config, 'sphereSize', 0.1, 2, 0.01)
-        .name('size')
+        .name('SIZE')
         .onChange((newSize) => {
           allGroups.forEach((group) => {
         group.children.forEach((child) => {
@@ -151,7 +151,7 @@ import * as dat from 'dat.gui';
       //     });
       //   });
       ellipseSub.add(config, 'ellipseOpacity', 0, 1, 0.01)
-        .name('opacity')
+        .name('OPACITY')
         .onChange((newOpacity) => {
           allGroups.forEach((group) => {
         const ellipseLine = group.children[0];
@@ -162,7 +162,7 @@ import * as dat from 'dat.gui';
         });
 
         ellipseSub.add(config, 'ellipseEcc', 0, 0.99, 0.01)
-        .name('Ellipse Ecc')
+        .name('ECCENTRICITY')
         .onChange(() => {
           updateAllEllipseGeometry();
         });
@@ -187,7 +187,7 @@ import * as dat from 'dat.gui';
       //     });
       //   });
       interSub.add(config, 'interLineOpacity', 0, 1, 0.01)
-        .name('opacity')
+        .name('OPACITY')
         .onChange((newOpacity) => {
           interGenLines.forEach((line) => {
             if (line.material) {
@@ -215,7 +215,7 @@ import * as dat from 'dat.gui';
       //     });
       //   });
       intraSub.add(config, 'intraLineOpacity', 0, 1, 0.01)
-        .name('opacity')
+        .name('OPACITY')
         .onChange((newOpacity) => {
           intraGenLines.forEach((line) => {
             if (line.material) {
@@ -229,7 +229,7 @@ import * as dat from 'dat.gui';
       const musicFolder = gui.addFolder('TIMING');
       musicFolder.add(config, 'recessionVelocity', -1, 10, 0.5)
         .name('VELOCITY');
-      musicFolder.add(config, 'BPM', 30, 200, 1)
+      musicFolder.add(config, 'BPM', 30, 300, 1)
         .name('BPM')
         .onChange((newBPM) => {
           BPM = newBPM;
@@ -409,6 +409,7 @@ import * as dat from 'dat.gui';
           color: new THREE.Color(config.ellipseColor),
           transparent: true,
           opacity: config.ellipseOpacity,
+          alphaHash: true,
         });
         const ellipseLine = new THREE.Line(ellipseGeom, ellipseMat);
         ellipseLine.visible = config.showEllipses;
@@ -432,6 +433,7 @@ import * as dat from 'dat.gui';
               opacity: config.sphereOpacity,
               blending: THREE.AdditiveBlending,
               depthTest: false,
+              alphaHash: true,
             });
             const sphere = new THREE.Mesh(sphereGeom, sphereMat);
             const offsetAngle = 2 * Math.PI * (step / numSteps);
@@ -464,13 +466,13 @@ import * as dat from 'dat.gui';
                 const lineGeom = new THREE.BufferGeometry();
                 lineGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-                const interMat = new THREE.LineBasicMaterial({
+                const interLineMat = new THREE.LineBasicMaterial({
                   color: new THREE.Color(config.interLineColor),
                   transparent: true,
                   opacity: config.interLineOpacity,
                   alphaHash: true,
                 });
-                const line = new THREE.Line(lineGeom, interMat);
+                const line = new THREE.Line(lineGeom, interLineMat);
                 line.visible = config.showInterLines;
                 line.userData = { sphereA: oldSphere, sphereB: newSphere };
 
@@ -653,26 +655,26 @@ import * as dat from 'dat.gui';
 // ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
-        // playerContainer.style.display = 'none';
-        // animate();
-
-      let animationStarted = false;
-      const audioElement = document.getElementById("audioPlayer");
-      const playerContainer = document.getElementById("playerContainer");
-      const seqContainer = document.getElementById("seqContainer");
-      const datGuiContainer = document.querySelector(".dg.main");
-
-      seqContainer.style.display = 'none';
-      datGuiContainer.style.display = 'none';
-
-      audioElement.addEventListener("play", () => {
-        if (!animationStarted) {
-          clock.start();
-          animationStarted = true;
-          animate();
-        }
-        
-        seqContainer.style.display = 'block';
-        datGuiContainer.style.display = 'block';
         playerContainer.style.display = 'none';
-      });
+        animate();
+
+      // let animationStarted = false;
+      // const audioElement = document.getElementById("audioPlayer");
+      // const playerContainer = document.getElementById("playerContainer");
+      // const seqContainer = document.getElementById("seqContainer");
+      // const datGuiContainer = document.querySelector(".dg.main");
+
+      // seqContainer.style.display = 'none';
+      // datGuiContainer.style.display = 'none';
+
+      // audioElement.addEventListener("play", () => {
+      //   if (!animationStarted) {
+      //     clock.start();
+      //     animationStarted = true;
+      //     animate();
+      //   }
+        
+      //   seqContainer.style.display = 'block';
+      //   datGuiContainer.style.display = 'block';
+      //   playerContainer.style.display = 'none';
+      // });
