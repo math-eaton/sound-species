@@ -163,14 +163,14 @@ import * as dat from 'dat.gui';
       // interSub.add(config, 'showInterLines')
       //   .name('visible')
       //   .onChange((value) => {
-      //     connectionLines.forEach((line) => {
+      //     interGenLines.forEach((line) => {
       //       line.visible = value;
       //     });
       //   });
       // interSub.addColor(config, 'interLineColor')
       //   .name('color')
       //   .onChange((newColor) => {
-      //     connectionLines.forEach((line) => {
+      //     interGenLines.forEach((line) => {
       //       if (line.material) {
       //         line.material.color.set(newColor);
       //       }
@@ -179,7 +179,7 @@ import * as dat from 'dat.gui';
       interSub.add(config, 'interLineOpacity', 0, 1, 0.01)
         .name('opacity')
         .onChange((newOpacity) => {
-          connectionLines.forEach((line) => {
+          interGenLines.forEach((line) => {
             if (line.material) {
               line.material.opacity = newOpacity;
             }
@@ -358,7 +358,7 @@ import * as dat from 'dat.gui';
       const clock = new THREE.Clock();
 
       const previousSpheres = {};   // Stores last generation's spheres by color
-      const connectionLines = [];   // Inter-generational lines
+      const interGenLines = [];   // Inter-generational lines
       const intraGenLines = [];     // Intra-generational (nearest neighbor) lines
 
       function createOrbitGroup() {
@@ -435,7 +435,7 @@ import * as dat from 'dat.gui';
                 line.userData = { sphereA: oldSphere, sphereB: newSphere };
 
                 scene.add(line);
-                connectionLines.push(line);
+                interGenLines.push(line);
               }
             });
           }
@@ -537,9 +537,9 @@ import * as dat from 'dat.gui';
         });
 
         // Update both inter and intra lines
-        connectionLines.concat(intraGenLines).forEach((line) => {
+        interGenLines.concat(intraGenLines).forEach((line) => {
           // Respect toggles for each line type
-          if (connectionLines.includes(line)) {
+          if (interGenLines.includes(line)) {
             // Inter line
             line.visible = config.showInterLines;
             if (line.material) {
@@ -577,14 +577,14 @@ import * as dat from 'dat.gui';
         });
 
         // Remove old inter lines
-        for (let i = connectionLines.length - 1; i >= 0; i--) {
-          const line = connectionLines[i];
+        for (let i = interGenLines.length - 1; i >= 0; i--) {
+          const line = interGenLines[i];
           if (
             line.userData.sphereA.position.z < -vanishDistance ||
             line.userData.sphereB.position.z < -vanishDistance
           ) {
             scene.remove(line);
-            connectionLines.splice(i, 1);
+            interGenLines.splice(i, 1);
           }
         }
 
@@ -608,23 +608,26 @@ import * as dat from 'dat.gui';
 // ===================== 7. AUDIO + START =====================
 
         // for testing purposes, remove audio player logic
-        playerContainer.style.display = 'none';
-        animate();
+        // playerContainer.style.display = 'none';
+        // animate();
 
-      // let animationStarted = false;
-      // const audioElement = document.getElementById("audioPlayer");
-      // const playerContainer = document.getElementById("playerContainer");
-      // const uiContainer = document.getElementById("uiContainer");
-      // uiContainer.style.display = 'none';
+      let animationStarted = false;
+      const audioElement = document.getElementById("audioPlayer");
+      const playerContainer = document.getElementById("playerContainer");
+      const seqContainer = document.getElementById("seqContainer");
+      const datGuiContainer = document.querySelector(".dg.main");
 
+      seqContainer.style.display = 'none';
+      datGuiContainer.style.display = 'none';
 
-      // audioElement.addEventListener("play", () => {
-      //   if (!animationStarted) {
-      //     clock.start();
-      //     animationStarted = true;
-      //     animate();
-      //   }
+      audioElement.addEventListener("play", () => {
+        if (!animationStarted) {
+          clock.start();
+          animationStarted = true;
+          animate();
+        }
         
-      //   uiContainer.style.display = 'block';
-      //   playerContainer.style.display = 'none';
-      // });
+        seqContainer.style.display = 'block';
+        datGuiContainer.style.display = 'block';
+        playerContainer.style.display = 'none';
+      });

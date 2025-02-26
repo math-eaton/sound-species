@@ -51,7 +51,7 @@ body {
   max-width: 400px;
 }
 
-#uiContainer {
+#seqContainer {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -101,7 +101,7 @@ input[type="number"] {
     font-size: 0.85em;
   }
 
-  #uiContainer {
+  #seqContainer {
     opacity: 0;
     pointer-events: none;
   }
