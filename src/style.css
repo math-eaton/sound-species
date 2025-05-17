@@ -128,3 +128,21 @@ input[type="number"] {
     width: 40px;
   }
 }
+
+.dg{
+
+font-family: Arial, Helvetica, sans-serif;
+text-transform: uppercase;
+font-size: 0.75rem;
+
+}
+
+.dg.main{
+  opacity: 0.75;
+
+}
+
+
+*{
+  /* overflow: hidden; */
+}
